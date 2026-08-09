@@ -1,0 +1,1024 @@
+{
+ "model": "Air100V3",
+ "modelId": "0x17",
+ "stride": 18,
+ "layers": 8,
+ "layerBytes": 220,
+ "addrFormula": "addr16 = layer*0xDC + 2*(row*18 + col)",
+ "note": "legends are FIXED PHYSICAL labels as printed on the keycap, never derived from live keycodes. Verified against NuPhyIO's Lighting Effects panel, which renders physical legends (Key Bindings renders assigned KEYCODES instead - that is what produced the old bogus F14/F15 legends). Slots 108/109 are the knob's synthetic row 6 - they have no keycap, so they are labelled by ROTATION DIRECTION, not by their default volume function.",
+ "entryWidthBits": 16,
+ "matrixSlots": 110,
+ "realKeys": 101,
+ "keys": [
+  {
+   "index": 0,
+   "row": 0,
+   "col": 0,
+   "addr": 0,
+   "legend": "ESC",
+   "label": "ESC",
+   "macFactory": 41,
+   "winFactory": 41
+  },
+  {
+   "index": 1,
+   "row": 0,
+   "col": 1,
+   "addr": 2,
+   "legend": "F1",
+   "label": "F1",
+   "macFactory": 105,
+   "winFactory": 58
+  },
+  {
+   "index": 2,
+   "row": 0,
+   "col": 2,
+   "addr": 4,
+   "legend": "F2",
+   "label": "F2",
+   "macFactory": 106,
+   "winFactory": 59
+  },
+  {
+   "index": 3,
+   "row": 0,
+   "col": 3,
+   "addr": 6,
+   "legend": "F3",
+   "label": "F3",
+   "macFactory": 32262,
+   "winFactory": 60
+  },
+  {
+   "index": 4,
+   "row": 0,
+   "col": 4,
+   "addr": 8,
+   "legend": "F4",
+   "label": "F4",
+   "macFactory": 32263,
+   "winFactory": 61
+  },
+  {
+   "index": 5,
+   "row": 0,
+   "col": 5,
+   "addr": 10,
+   "legend": "F5",
+   "label": "F5",
+   "macFactory": 32264,
+   "winFactory": 62
+  },
+  {
+   "index": 6,
+   "row": 0,
+   "col": 6,
+   "addr": 12,
+   "legend": "F6",
+   "label": "F6",
+   "macFactory": 32278,
+   "winFactory": 63
+  },
+  {
+   "index": 7,
+   "row": 0,
+   "col": 7,
+   "addr": 14,
+   "legend": "F7",
+   "label": "F7",
+   "macFactory": 172,
+   "winFactory": 64
+  },
+  {
+   "index": 8,
+   "row": 0,
+   "col": 8,
+   "addr": 16,
+   "legend": "F8",
+   "label": "F8",
+   "macFactory": 174,
+   "winFactory": 65
+  },
+  {
+   "index": 9,
+   "row": 0,
+   "col": 9,
+   "addr": 18,
+   "legend": "F9",
+   "label": "F9",
+   "macFactory": 171,
+   "winFactory": 66
+  },
+  {
+   "index": 10,
+   "row": 0,
+   "col": 10,
+   "addr": 20,
+   "legend": "F10",
+   "label": "F10",
+   "macFactory": 168,
+   "winFactory": 67
+  },
+  {
+   "index": 11,
+   "row": 0,
+   "col": 11,
+   "addr": 22,
+   "legend": "F11",
+   "label": "F11",
+   "macFactory": 170,
+   "winFactory": 68
+  },
+  {
+   "index": 12,
+   "row": 0,
+   "col": 12,
+   "addr": 24,
+   "legend": "F12",
+   "label": "F12",
+   "macFactory": 169,
+   "winFactory": 69
+  },
+  {
+   "index": 13,
+   "row": 0,
+   "col": 13,
+   "addr": 26,
+   "legend": "DEL",
+   "label": "DEL",
+   "macFactory": 76,
+   "winFactory": 76
+  },
+  {
+   "index": 14,
+   "row": 0,
+   "col": 14,
+   "addr": 28,
+   "legend": "HOME",
+   "label": "HOME",
+   "macFactory": 74,
+   "winFactory": 74
+  },
+  {
+   "index": 15,
+   "row": 0,
+   "col": 15,
+   "addr": 30,
+   "legend": "END",
+   "label": "END",
+   "macFactory": 77,
+   "winFactory": 77
+  },
+  {
+   "index": 16,
+   "row": 0,
+   "col": 16,
+   "addr": 32,
+   "legend": "PAGE_UP",
+   "label": "PAGE_UP",
+   "macFactory": 75,
+   "winFactory": 75
+  },
+  {
+   "index": 17,
+   "row": 0,
+   "col": 17,
+   "addr": 34,
+   "legend": "PAGE_DOWN",
+   "label": "PAGE_DOWN",
+   "macFactory": 78,
+   "winFactory": 78
+  },
+  {
+   "index": 18,
+   "row": 1,
+   "col": 0,
+   "addr": 36,
+   "legend": "GRAVE",
+   "label": "GRAVE",
+   "macFactory": 53,
+   "winFactory": 53
+  },
+  {
+   "index": 19,
+   "row": 1,
+   "col": 1,
+   "addr": 38,
+   "legend": "1",
+   "label": "1",
+   "macFactory": 30,
+   "winFactory": 30
+  },
+  {
+   "index": 20,
+   "row": 1,
+   "col": 2,
+   "addr": 40,
+   "legend": "2",
+   "label": "2",
+   "macFactory": 31,
+   "winFactory": 31
+  },
+  {
+   "index": 21,
+   "row": 1,
+   "col": 3,
+   "addr": 42,
+   "legend": "3",
+   "label": "3",
+   "macFactory": 32,
+   "winFactory": 32
+  },
+  {
+   "index": 22,
+   "row": 1,
+   "col": 4,
+   "addr": 44,
+   "legend": "4",
+   "label": "4",
+   "macFactory": 33,
+   "winFactory": 33
+  },
+  {
+   "index": 23,
+   "row": 1,
+   "col": 5,
+   "addr": 46,
+   "legend": "5",
+   "label": "5",
+   "macFactory": 34,
+   "winFactory": 34
+  },
+  {
+   "index": 24,
+   "row": 1,
+   "col": 6,
+   "addr": 48,
+   "legend": "6",
+   "label": "6",
+   "macFactory": 35,
+   "winFactory": 35
+  },
+  {
+   "index": 25,
+   "row": 1,
+   "col": 7,
+   "addr": 50,
+   "legend": "7",
+   "label": "7",
+   "macFactory": 36,
+   "winFactory": 36
+  },
+  {
+   "index": 26,
+   "row": 1,
+   "col": 8,
+   "addr": 52,
+   "legend": "8",
+   "label": "8",
+   "macFactory": 37,
+   "winFactory": 37
+  },
+  {
+   "index": 27,
+   "row": 1,
+   "col": 9,
+   "addr": 54,
+   "legend": "9",
+   "label": "9",
+   "macFactory": 38,
+   "winFactory": 38
+  },
+  {
+   "index": 28,
+   "row": 1,
+   "col": 10,
+   "addr": 56,
+   "legend": "0",
+   "label": "0",
+   "macFactory": 39,
+   "winFactory": 39
+  },
+  {
+   "index": 29,
+   "row": 1,
+   "col": 11,
+   "addr": 58,
+   "legend": "MINS",
+   "label": "MINS",
+   "macFactory": 45,
+   "winFactory": 45
+  },
+  {
+   "index": 30,
+   "row": 1,
+   "col": 12,
+   "addr": 60,
+   "legend": "EQL",
+   "label": "EQL",
+   "macFactory": 46,
+   "winFactory": 46
+  },
+  {
+   "index": 31,
+   "row": 1,
+   "col": 13,
+   "addr": 62,
+   "legend": "BACKSPACE",
+   "label": "BACKSPACE",
+   "macFactory": 42,
+   "winFactory": 42
+  },
+  {
+   "index": 32,
+   "row": 1,
+   "col": 14,
+   "addr": 64,
+   "legend": "NUM",
+   "label": "NUM",
+   "macFactory": 83,
+   "winFactory": 83
+  },
+  {
+   "index": 33,
+   "row": 1,
+   "col": 15,
+   "addr": 66,
+   "legend": "KP_SLASH",
+   "label": "KP_SLASH",
+   "macFactory": 84,
+   "winFactory": 84
+  },
+  {
+   "index": 34,
+   "row": 1,
+   "col": 16,
+   "addr": 68,
+   "legend": "KP_ASTERISK",
+   "label": "KP_ASTERISK",
+   "macFactory": 85,
+   "winFactory": 85
+  },
+  {
+   "index": 35,
+   "row": 1,
+   "col": 17,
+   "addr": 70,
+   "legend": "KP_MINUS",
+   "label": "KP_MINUS",
+   "macFactory": 86,
+   "winFactory": 86
+  },
+  {
+   "index": 36,
+   "row": 2,
+   "col": 0,
+   "addr": 72,
+   "legend": "TAB",
+   "label": "TAB",
+   "macFactory": 43,
+   "winFactory": 43
+  },
+  {
+   "index": 37,
+   "row": 2,
+   "col": 1,
+   "addr": 74,
+   "legend": "Q",
+   "label": "Q",
+   "macFactory": 20,
+   "winFactory": 20
+  },
+  {
+   "index": 38,
+   "row": 2,
+   "col": 2,
+   "addr": 76,
+   "legend": "W",
+   "label": "W",
+   "macFactory": 26,
+   "winFactory": 26
+  },
+  {
+   "index": 39,
+   "row": 2,
+   "col": 3,
+   "addr": 78,
+   "legend": "E",
+   "label": "E",
+   "macFactory": 8,
+   "winFactory": 8
+  },
+  {
+   "index": 40,
+   "row": 2,
+   "col": 4,
+   "addr": 80,
+   "legend": "R",
+   "label": "R",
+   "macFactory": 21,
+   "winFactory": 21
+  },
+  {
+   "index": 41,
+   "row": 2,
+   "col": 5,
+   "addr": 82,
+   "legend": "T",
+   "label": "T",
+   "macFactory": 23,
+   "winFactory": 23
+  },
+  {
+   "index": 42,
+   "row": 2,
+   "col": 6,
+   "addr": 84,
+   "legend": "Y",
+   "label": "Y",
+   "macFactory": 28,
+   "winFactory": 28
+  },
+  {
+   "index": 43,
+   "row": 2,
+   "col": 7,
+   "addr": 86,
+   "legend": "U",
+   "label": "U",
+   "macFactory": 24,
+   "winFactory": 24
+  },
+  {
+   "index": 44,
+   "row": 2,
+   "col": 8,
+   "addr": 88,
+   "legend": "I",
+   "label": "I",
+   "macFactory": 12,
+   "winFactory": 12
+  },
+  {
+   "index": 45,
+   "row": 2,
+   "col": 9,
+   "addr": 90,
+   "legend": "O",
+   "label": "O",
+   "macFactory": 18,
+   "winFactory": 18
+  },
+  {
+   "index": 46,
+   "row": 2,
+   "col": 10,
+   "addr": 92,
+   "legend": "P",
+   "label": "P",
+   "macFactory": 19,
+   "winFactory": 19
+  },
+  {
+   "index": 47,
+   "row": 2,
+   "col": 11,
+   "addr": 94,
+   "legend": "LBRC",
+   "label": "LBRC",
+   "macFactory": 47,
+   "winFactory": 47
+  },
+  {
+   "index": 48,
+   "row": 2,
+   "col": 12,
+   "addr": 96,
+   "legend": "RBRC",
+   "label": "RBRC",
+   "macFactory": 48,
+   "winFactory": 48
+  },
+  {
+   "index": 49,
+   "row": 2,
+   "col": 13,
+   "addr": 98,
+   "legend": "BACKSLASH",
+   "label": "BACKSLASH",
+   "macFactory": 49,
+   "winFactory": 49
+  },
+  {
+   "index": 50,
+   "row": 2,
+   "col": 14,
+   "addr": 100,
+   "legend": "KP_7",
+   "label": "KP_7",
+   "macFactory": 95,
+   "winFactory": 95
+  },
+  {
+   "index": 51,
+   "row": 2,
+   "col": 15,
+   "addr": 102,
+   "legend": "KP_8",
+   "label": "KP_8",
+   "macFactory": 96,
+   "winFactory": 96
+  },
+  {
+   "index": 52,
+   "row": 2,
+   "col": 16,
+   "addr": 104,
+   "legend": "KP_9",
+   "label": "KP_9",
+   "macFactory": 97,
+   "winFactory": 97
+  },
+  {
+   "index": 53,
+   "row": 2,
+   "col": 17,
+   "addr": 106,
+   "legend": "KP_PLUS",
+   "label": "KP_PLUS",
+   "macFactory": 87,
+   "winFactory": 87
+  },
+  {
+   "index": 54,
+   "row": 3,
+   "col": 0,
+   "addr": 108,
+   "legend": "CAPS",
+   "label": "CAPS",
+   "macFactory": 57,
+   "winFactory": 57
+  },
+  {
+   "index": 55,
+   "row": 3,
+   "col": 1,
+   "addr": 110,
+   "legend": "A",
+   "label": "A",
+   "macFactory": 4,
+   "winFactory": 4
+  },
+  {
+   "index": 56,
+   "row": 3,
+   "col": 2,
+   "addr": 112,
+   "legend": "S",
+   "label": "S",
+   "macFactory": 22,
+   "winFactory": 22
+  },
+  {
+   "index": 57,
+   "row": 3,
+   "col": 3,
+   "addr": 114,
+   "legend": "D",
+   "label": "D",
+   "macFactory": 7,
+   "winFactory": 7
+  },
+  {
+   "index": 58,
+   "row": 3,
+   "col": 4,
+   "addr": 116,
+   "legend": "F",
+   "label": "F",
+   "macFactory": 9,
+   "winFactory": 9
+  },
+  {
+   "index": 59,
+   "row": 3,
+   "col": 5,
+   "addr": 118,
+   "legend": "G",
+   "label": "G",
+   "macFactory": 10,
+   "winFactory": 10
+  },
+  {
+   "index": 60,
+   "row": 3,
+   "col": 6,
+   "addr": 120,
+   "legend": "H",
+   "label": "H",
+   "macFactory": 11,
+   "winFactory": 11
+  },
+  {
+   "index": 61,
+   "row": 3,
+   "col": 7,
+   "addr": 122,
+   "legend": "J",
+   "label": "J",
+   "macFactory": 13,
+   "winFactory": 13
+  },
+  {
+   "index": 62,
+   "row": 3,
+   "col": 8,
+   "addr": 124,
+   "legend": "K",
+   "label": "K",
+   "macFactory": 14,
+   "winFactory": 14
+  },
+  {
+   "index": 63,
+   "row": 3,
+   "col": 9,
+   "addr": 126,
+   "legend": "L",
+   "label": "L",
+   "macFactory": 15,
+   "winFactory": 15
+  },
+  {
+   "index": 64,
+   "row": 3,
+   "col": 10,
+   "addr": 128,
+   "legend": "SCLN",
+   "label": "SCLN",
+   "macFactory": 51,
+   "winFactory": 51
+  },
+  {
+   "index": 65,
+   "row": 3,
+   "col": 11,
+   "addr": 130,
+   "legend": "QUOT",
+   "label": "QUOT",
+   "macFactory": 52,
+   "winFactory": 52
+  },
+  {
+   "index": 67,
+   "row": 3,
+   "col": 13,
+   "addr": 134,
+   "legend": "ENT",
+   "label": "ENT",
+   "macFactory": 40,
+   "winFactory": 40
+  },
+  {
+   "index": 68,
+   "row": 3,
+   "col": 14,
+   "addr": 136,
+   "legend": "KP_4",
+   "label": "KP_4",
+   "macFactory": 92,
+   "winFactory": 92
+  },
+  {
+   "index": 69,
+   "row": 3,
+   "col": 15,
+   "addr": 138,
+   "legend": "KP_5",
+   "label": "KP_5",
+   "macFactory": 93,
+   "winFactory": 93
+  },
+  {
+   "index": 70,
+   "row": 3,
+   "col": 16,
+   "addr": 140,
+   "legend": "KP_6",
+   "label": "KP_6",
+   "macFactory": 94,
+   "winFactory": 94
+  },
+  {
+   "index": 72,
+   "row": 4,
+   "col": 0,
+   "addr": 144,
+   "legend": "LEFT_SHIFT",
+   "label": "LEFT_SHIFT",
+   "macFactory": 225,
+   "winFactory": 225
+  },
+  {
+   "index": 73,
+   "row": 4,
+   "col": 1,
+   "addr": 146,
+   "legend": "Z",
+   "label": "Z",
+   "macFactory": 29,
+   "winFactory": 29
+  },
+  {
+   "index": 74,
+   "row": 4,
+   "col": 2,
+   "addr": 148,
+   "legend": "X",
+   "label": "X",
+   "macFactory": 27,
+   "winFactory": 27
+  },
+  {
+   "index": 75,
+   "row": 4,
+   "col": 3,
+   "addr": 150,
+   "legend": "C",
+   "label": "C",
+   "macFactory": 6,
+   "winFactory": 6
+  },
+  {
+   "index": 76,
+   "row": 4,
+   "col": 4,
+   "addr": 152,
+   "legend": "V",
+   "label": "V",
+   "macFactory": 25,
+   "winFactory": 25
+  },
+  {
+   "index": 77,
+   "row": 4,
+   "col": 5,
+   "addr": 154,
+   "legend": "B",
+   "label": "B",
+   "macFactory": 5,
+   "winFactory": 5
+  },
+  {
+   "index": 78,
+   "row": 4,
+   "col": 6,
+   "addr": 156,
+   "legend": "N",
+   "label": "N",
+   "macFactory": 17,
+   "winFactory": 17
+  },
+  {
+   "index": 79,
+   "row": 4,
+   "col": 7,
+   "addr": 158,
+   "legend": "M",
+   "label": "M",
+   "macFactory": 16,
+   "winFactory": 16
+  },
+  {
+   "index": 80,
+   "row": 4,
+   "col": 8,
+   "addr": 160,
+   "legend": "COMM",
+   "label": "COMM",
+   "macFactory": 54,
+   "winFactory": 54
+  },
+  {
+   "index": 81,
+   "row": 4,
+   "col": 9,
+   "addr": 162,
+   "legend": "DOT",
+   "label": "DOT",
+   "macFactory": 55,
+   "winFactory": 55
+  },
+  {
+   "index": 82,
+   "row": 4,
+   "col": 10,
+   "addr": 164,
+   "legend": "SLASH",
+   "label": "SLASH",
+   "macFactory": 56,
+   "winFactory": 56
+  },
+  {
+   "index": 83,
+   "row": 4,
+   "col": 11,
+   "addr": 166,
+   "legend": "RIGHT_SHIFT",
+   "label": "RIGHT_SHIFT",
+   "macFactory": 229,
+   "winFactory": 229
+  },
+  {
+   "index": 84,
+   "row": 4,
+   "col": 12,
+   "addr": 168,
+   "legend": "UP",
+   "label": "UP",
+   "macFactory": 82,
+   "winFactory": 82
+  },
+  {
+   "index": 85,
+   "row": 4,
+   "col": 13,
+   "addr": 170,
+   "legend": "KP_1",
+   "label": "KP_1",
+   "macFactory": 89,
+   "winFactory": 89
+  },
+  {
+   "index": 86,
+   "row": 4,
+   "col": 14,
+   "addr": 172,
+   "legend": "KP_2",
+   "label": "KP_2",
+   "macFactory": 90,
+   "winFactory": 90
+  },
+  {
+   "index": 87,
+   "row": 4,
+   "col": 15,
+   "addr": 174,
+   "legend": "KP_3",
+   "label": "KP_3",
+   "macFactory": 91,
+   "winFactory": 91
+  },
+  {
+   "index": 88,
+   "row": 4,
+   "col": 16,
+   "addr": 176,
+   "legend": "KP_ENTER",
+   "label": "KP_ENTER",
+   "macFactory": 88,
+   "winFactory": 88
+  },
+  {
+   "index": 90,
+   "row": 5,
+   "col": 0,
+   "addr": 180,
+   "legend": "LCTL",
+   "label": "LCTL",
+   "macFactory": 224,
+   "winFactory": 224
+  },
+  {
+   "index": 91,
+   "row": 5,
+   "col": 1,
+   "addr": 182,
+   "legend": "LALT",
+   "label": "LALT",
+   "macFactory": 226,
+   "winFactory": 227
+  },
+  {
+   "index": 92,
+   "row": 5,
+   "col": 2,
+   "addr": 184,
+   "legend": "LCMD",
+   "label": "LCMD",
+   "macFactory": 227,
+   "winFactory": 226
+  },
+  {
+   "index": 95,
+   "row": 5,
+   "col": 5,
+   "addr": 190,
+   "legend": "SPACE",
+   "label": "SPACE",
+   "macFactory": 44,
+   "winFactory": 44
+  },
+  {
+   "index": 98,
+   "row": 5,
+   "col": 8,
+   "addr": 196,
+   "legend": "RCMD",
+   "label": "RCMD",
+   "macFactory": 231,
+   "winFactory": 230
+  },
+  {
+   "index": 99,
+   "row": 5,
+   "col": 9,
+   "addr": 198,
+   "legend": "FN",
+   "label": "FN",
+   "macFactory": 21025,
+   "winFactory": 21029
+  },
+  {
+   "index": 100,
+   "row": 5,
+   "col": 10,
+   "addr": 200,
+   "legend": "RCTL",
+   "label": "RCTL",
+   "macFactory": 228,
+   "winFactory": 228
+  },
+  {
+   "index": 101,
+   "row": 5,
+   "col": 11,
+   "addr": 202,
+   "legend": "LEFT",
+   "label": "LEFT",
+   "macFactory": 80,
+   "winFactory": 80
+  },
+  {
+   "index": 102,
+   "row": 5,
+   "col": 12,
+   "addr": 204,
+   "legend": "DOWN",
+   "label": "DOWN",
+   "macFactory": 81,
+   "winFactory": 81
+  },
+  {
+   "index": 103,
+   "row": 5,
+   "col": 13,
+   "addr": 206,
+   "legend": "RGHT",
+   "label": "RGHT",
+   "macFactory": 79,
+   "winFactory": 79
+  },
+  {
+   "index": 104,
+   "row": 5,
+   "col": 14,
+   "addr": 208,
+   "legend": "KP_0",
+   "label": "KP_0",
+   "macFactory": 98,
+   "winFactory": 98
+  },
+  {
+   "index": 105,
+   "row": 5,
+   "col": 15,
+   "addr": 210,
+   "legend": "KP_DOT",
+   "label": "KP_DOT",
+   "macFactory": 99,
+   "winFactory": 99
+  },
+  {
+   "index": 108,
+   "row": 6,
+   "col": 0,
+   "addr": 216,
+   "legend": "KNOB_CCW",
+   "label": "KNOB_CCW",
+   "macFactory": 170,
+   "winFactory": 170
+  },
+  {
+   "index": 109,
+   "row": 6,
+   "col": 1,
+   "addr": 218,
+   "legend": "KNOB_CW",
+   "label": "KNOB_CW",
+   "macFactory": 169,
+   "winFactory": 169
+  }
+ ]
+}

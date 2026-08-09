@@ -1,0 +1,107 @@
+<meta charset="utf-8">
+<title>nuphy keytest</title>
+<style>
+  :root{--bg:#fff;--fg:#111;--mut:#666;--line:#e5e5e5;--card:#fafafa;
+        --ok:#0a7;--hot:#c62;--dim:#999;}
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#141414;--fg:#eee;--mut:#999;--line:#2a2a2a;--card:#1c1c1c;--dim:#777;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:15px/1.5 -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+  header{padding:20px 28px;border-bottom:1px solid var(--line);
+         display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  h1{font-size:16px;margin:0;font-weight:650;letter-spacing:-.01em}
+  .sp{flex:1}
+  button{font:600 13px system-ui;padding:7px 14px;border:1px solid var(--line);
+         background:var(--card);color:var(--fg);border-radius:8px;cursor:pointer}
+  button:hover{border-color:var(--dim)}
+  #live{padding:28px;text-align:center;border-bottom:1px solid var(--line)}
+  #big{font:700 44px/1.1 ui-monospace,Menlo,monospace;letter-spacing:-.02em}
+  #sub{margin-top:10px;color:var(--mut);font-size:15px;min-height:22px}
+  #verdict{margin-top:14px;font-weight:650;font-size:17px;min-height:24px}
+  .wrap{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font:13px/1.5 ui-monospace,Menlo,monospace}
+  th,td{padding:7px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{position:sticky;top:0;background:var(--bg);color:var(--mut);
+     font:600 11px system-ui;text-transform:uppercase;letter-spacing:.06em}
+  tr.up td{color:var(--mut)}
+  .mod{color:var(--hot);font-weight:600}
+  .hyper{color:var(--ok);font-weight:700}
+  .hint{padding:14px 28px;color:var(--mut);font-size:13px;border-top:1px solid var(--line)}
+  code{background:var(--card);padding:1px 5px;border-radius:4px}
+</style>
+
+<header>
+  <h1>nuphy keytest</h1>
+  <span style="color:var(--mut);font-size:13px">every keydown / keyup, with hold duration</span>
+  <span class="sp"></span>
+  <button id="clr">clear</button>
+  <button id="cpy">copy log</button>
+</header>
+
+<div id="live">
+  <div id="big">press a key</div>
+  <div id="sub"></div>
+  <div id="verdict"></div>
+</div>
+
+<div class="wrap">
+  <table>
+    <thead><tr><th>t (ms)</th><th>event</th><th>code</th><th>key</th><th>modifiers</th><th>held</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<div class="hint">
+  Hold duration is on the <b>keyup</b> row — that is how you tell a real hold from a
+  discrete fire. A modifier that only appears for a few ms was <i>executed</i>, not
+  <i>held</i>. <code>window.__log</code> holds the raw array.
+</div>
+
+<script>
+const rows = document.getElementById('rows'), big = document.getElementById('big'),
+      sub = document.getElementById('sub'), verdict = document.getElementById('verdict');
+window.__log = [];
+let t0 = null;
+const down = new Map();
+
+function mods(e){
+  return [e.ctrlKey&&'ctrl', e.shiftKey&&'shift', e.altKey&&'alt', e.metaKey&&'meta'].filter(Boolean);
+}
+function add(e, type){
+  const now = performance.now();
+  if (t0 === null) t0 = now;
+  const m = mods(e), t = Math.round(now - t0);
+  let held = '';
+  if (type === 'down') { if (!down.has(e.code)) down.set(e.code, now); }
+  else if (down.has(e.code)) { held = Math.round(now - down.get(e.code)) + ' ms'; down.delete(e.code); }
+
+  window.__log.push({t, type, code:e.code, key:e.key, mods:m.join('+')||'none',
+                     held:held||null, repeat:e.repeat});
+
+  const tr = document.createElement('tr');
+  if (type === 'up') tr.className = 'up';
+  const isHyper = m.length === 4;
+  tr.innerHTML = `<td>${t}</td><td>${type}</td><td>${e.code}</td><td>${e.key === ' ' ? '␣' : e.key}</td>`
+    + `<td class="${isHyper?'hyper':(m.length?'mod':'')}">${m.join('+')||'—'}</td><td>${held||''}</td>`;
+  rows.prepend(tr);
+  while (rows.children.length > 400) rows.lastChild.remove();
+
+  if (type === 'down') {
+    big.textContent = e.code;
+    sub.textContent = `key "${e.key}"  ·  ${m.length ? m.join(' + ') : 'no modifiers'}`;
+    verdict.textContent = isHyper ? '✅ HYPER — all four modifiers held' : '';
+    verdict.style.color = 'var(--ok)';
+  }
+}
+addEventListener('keydown', e => add(e,'down'), true);
+addEventListener('keyup',   e => add(e,'up'),   true);
+
+document.getElementById('clr').onclick = () => {
+  rows.innerHTML=''; window.__log=[]; t0=null; down.clear();
+  big.textContent='press a key'; sub.textContent=''; verdict.textContent='';
+};
+document.getElementById('cpy').onclick = () =>
+  navigator.clipboard.writeText(JSON.stringify(window.__log,null,1));
+</script>

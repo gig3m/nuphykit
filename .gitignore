@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# NuPhy proprietary material — NEVER commit these to a public repo.
+# The firmware is NuPhy's copyrighted work; obtain it yourself (see firmware/README.md).
+firmware/*.bin
+firmware/*.zip
+firmware/strings.txt
+# NuPhy web-app bundle and any extracted webpack modules
+**/drive_main.js
+**/mod_*.js
+
+# Transient working captures / backups (not deliverables)
+snapshots/kit_*.json
+snapshots/state_*.bin
+snapshots/state_*.json
+snapshots/module_*.bin
+snapshots/scan.bin
+snapshots/postflash.bin
+snapshots/appdefine.bin
+snapshots/keylight*.bin
+snapshots/lightlog.txt
+snapshots/chunkmap.json
+snapshots/spaces/
+snapshots/golden_pre_reset_contaminated.bin

@@ -1,0 +1,21 @@
+{
+ "used": false,
+ "label": "MACRO 1",
+ "keyCode": 0,
+ "bottomKeyType": 7,
+ "value": 0,
+ "bindKeys": [
+  {"id": 4, "label": "", "layer": 0, "isEmpty": true, "loop": 1, "isActive": true},
+  {"id": 5, "label": "", "layer": 0, "isEmpty": true, "loop": 1},
+  {"id": 6, "label": "", "layer": 0, "isEmpty": true, "loop": 1}
+ ],
+ "info": {
+  "macroId": 0,
+  "actions": [
+   {"delayMs": 1,   "keyAction": 1, "isEnd": false, "keyCode": 224, "id": 1, "editArr": [], "lightIndex": 1, "keyLabel": "CTRL"},
+   {"delayMs": 2,   "keyAction": 1, "isEnd": false, "keyCode": 226, "id": 2, "editArr": [], "lightIndex": 2, "keyLabel": "OPT"},
+   {"delayMs": 7,   "keyAction": 1, "isEnd": false, "keyCode": 225, "id": 3, "editArr": [], "lightIndex": 3, "keyLabel": "SHIFT"},
+   {"delayMs": 844, "keyAction": 1, "isEnd": true,  "keyCode": 227, "id": 4, "editArr": [], "lightIndex": 4, "keyLabel": "CMD"}
+  ]
+ }
+}

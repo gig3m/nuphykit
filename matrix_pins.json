@@ -1,0 +1,34 @@
+{
+ "note": "Recovered from firmware 1.0.6.6 by disassembly; see PROTOCOL 73",
+ "scan": "rows driven LOW one at a time, columns read from PIN, keys ACTIVE LOW with pull-ups",
+ "col_table_file_offset": "0x407DC",
+ "row_table_file_offset": "0x40824",
+ "cols": [
+  "PA0",
+  "PA1",
+  "PA2",
+  "PA3",
+  "PA15",
+  "PA14",
+  "PA13",
+  "PA12",
+  "PA7",
+  "PA8",
+  "PB7",
+  "PB6",
+  "PB5",
+  "PB4",
+  "PB3",
+  "PB2",
+  "PB1",
+  "PB0"
+ ],
+ "rows": [
+  "PB17",
+  "PB16",
+  "PB18",
+  "PB20",
+  "PB21",
+  "PB22"
+ ]
+}
