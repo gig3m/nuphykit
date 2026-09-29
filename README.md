@@ -41,6 +41,16 @@ uv run --with hidapi python -m nuphykit show
 The examples below use `python -m nuphykit`; the installed `nuphykit` command is
 identical.
 
+**Linux:** the keyboard's HID nodes are root-only by default. One udev rule
+gives the desktop user access (no sudo needed afterwards); plug the keyboard in
+by cable, since the 2.4 GHz dongle doesn't carry the configuration interface:
+
+```bash
+echo 'KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="19f5", MODE="0660", TAG+="uaccess"' \
+  | sudo tee /etc/udev/rules.d/60-nuphy.rules
+sudo udevadm control --reload && sudo udevadm trigger
+```
+
 Quit NuPhyIO isn't required, but note that any CLI command orphans the app's
 session until you reload it (see Hazards).
 
