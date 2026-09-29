@@ -8,7 +8,16 @@ from __future__ import annotations
 import os
 import time
 
-import hid
+import sys
+
+# The hidapi wheel's default backend on Linux is libusb, which reports every
+# interface as usage 0/0 (so the raw interface can't be told apart) and needs
+# access to /dev/bus/usb. Its hidraw backend reports usages and opens the
+# /dev/hidraw nodes a udev uaccess rule grants to the desktop user.
+if sys.platform.startswith("linux"):
+    import hidraw as hid
+else:
+    import hid
 
 VID = 0x19F5
 PID_APP = 0x102D          # application firmware
