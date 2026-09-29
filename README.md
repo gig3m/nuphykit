@@ -9,6 +9,8 @@ This repo is a full reverse-engineering of that protocol, a toolkit that does
 what NuPhyIO won't, and a documented map of the firmware down to the flash
 protocol — enough to build custom firmware.
 
+![nuphykit reading a keyboard: its five storage spaces and lighting, then part of the decoded keymap](docs/screenshot.png)
+
 ## What this gives you that NuPhyIO doesn't
 
 - **Hyper on Caps Lock** — and any modifier combination. The whole `0x0100`–`0x1FFF`
