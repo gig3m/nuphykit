@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nuphykit"
-version = "0.1.0"
+version = "0.1.1"
 description = "Open-source tooling and reverse-engineered protocol map for the NuPhy Air100 V3 keyboard"
 readme = "README.md"
 license = "MIT"
