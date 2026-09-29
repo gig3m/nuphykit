@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nuphykit"
+version = "0.1.0"
+description = "Open-source tooling and reverse-engineered protocol map for the NuPhy Air100 V3 keyboard"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+dependencies = ["hidapi"]
+keywords = ["nuphy", "keyboard", "hid", "reverse-engineering", "rgb"]
+
+[project.urls]
+Repository = "https://github.com/gig3m/nuphykit"
+
+[project.scripts]
+nuphykit = "nuphykit.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["nuphykit"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"matrix.json" = "nuphykit/matrix.json"
+"key_led.json" = "nuphykit/key_led.json"
+"keycodes.json" = "nuphykit/keycodes.json"

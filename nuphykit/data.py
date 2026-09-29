@@ -16,11 +16,19 @@ import os
 from functools import lru_cache
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# An installed wheel carries the JSON maps inside the package; a checkout keeps
+# them at the repo root.
+_PKG = os.path.dirname(os.path.abspath(__file__))
+
+
+def _data(name: str) -> str:
+    inside = os.path.join(_PKG, name)
+    return inside if os.path.exists(inside) else os.path.join(ROOT, name)
 
 
 @lru_cache(maxsize=1)
 def matrix() -> list[dict]:
-    with open(os.path.join(ROOT, "matrix.json")) as f:
+    with open(_data("matrix.json")) as f:
         return json.load(f)["keys"]
 
 
@@ -41,7 +49,7 @@ def by_slot() -> dict[int, dict]:
 def key_led() -> dict:
     """Physical legend -> LED index (row-major, 18/row). Verified rows 0-3."""
     try:
-        return json.load(open(os.path.join(ROOT, "key_led.json")))["map"]
+        return json.load(open(_data("key_led.json")))["map"]
     except FileNotFoundError:
         return {k["legend"]: k["row"] * 18 + k["col"]
                 for k in matrix()}
@@ -50,7 +58,7 @@ def key_led() -> dict:
 @lru_cache(maxsize=1)
 def keycodes() -> dict[str, int]:
     try:
-        with open(os.path.join(ROOT, "keycodes.json")) as f:
+        with open(_data("keycodes.json")) as f:
             raw = json.load(f)
     except FileNotFoundError:
         return {}

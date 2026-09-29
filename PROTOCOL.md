@@ -1556,7 +1556,7 @@ Connection       2.4G USB
 ### Two traps hit while doing this
 
 1. **Changing Keyboard Layout reloads the whole app**, destroying an in-page
-   capture log — precisely HANDOFF HAZARD 3 (never hold a capture only in page
+   capture log — precisely BENCH-NOTES HAZARD 3 (never hold a capture only in page
    memory), walked into anyway. Fix: have the `sendReport` hook append to
    `localStorage` on every frame.
 2. **The app's Auto Sleep write was silently discarded** because CLI calls made

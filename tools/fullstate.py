@@ -11,7 +11,7 @@ Captures:
   * every read-only Get command in opcodes.json (18 of them)
 
 Only Get* opcodes are sent. Nothing here writes. 0xEF SetIapMode (bootloader
-entry) and every Set/Reset/Restore are deliberately excluded -- see HANDOFF
+entry) and every Set/Reset/Restore are deliberately excluded -- see docs/BENCH-NOTES.md
 HAZARD 1, never sweep opcodes.
 
 0xD2 GetKeyLightColor is captured but marked VOLATILE: it returns the live

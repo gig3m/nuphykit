@@ -24,11 +24,22 @@ protocol — enough to build custom firmware.
 
 ## Install
 
-No install. Requires `hidapi`, pulled on demand with [uv](https://docs.astral.sh/uv/):
+Install the `nuphykit` command straight from GitHub (needs `hidapi`, pulled in
+automatically):
+
+```bash
+uv tool install git+https://github.com/gig3m/nuphykit    # or: pipx install git+https://…
+nuphykit show
+```
+
+Or run from a checkout with no install at all:
 
 ```bash
 uv run --with hidapi python -m nuphykit show
 ```
+
+The examples below use `python -m nuphykit`; the installed `nuphykit` command is
+identical.
 
 Quit NuPhyIO isn't required, but note that any CLI command orphans the app's
 session until you reload it (see Hazards).
@@ -133,7 +144,7 @@ byte map, and the flash frame builder checked against **real captured frames**.
 
 | file | contents |
 |------|----------|
-| `HANDOFF.md` | read first: board state, hazards, protocol on a page |
+| `docs/BENCH-NOTES.md` | the maintainer's bench log: state of the test board, hazards, protocol on a page |
 | `PROTOCOL.md` | the spec, every claim tagged by evidence tier |
 | `AUDIT.md` | evidence rules and what is **not** proven |
 | `SWEEP.md` | the UI-option sweep and its results |

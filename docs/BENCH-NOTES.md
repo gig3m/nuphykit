@@ -1,4 +1,4 @@
-# NuPhy Air100 V3 — reverse engineering handoff
+# NuPhy Air100 V3 — maintainer bench notes
 
 **Read this first.** Then `AUDIT.md` (evidence discipline), then `PROTOCOL.md`
 (the spec). Goal: understand the board completely enough to ship an open-source
@@ -35,7 +35,7 @@ cd ~/projects/nuphy-re && uv run --with hidapi python tools/restore.py
 PROTOCOL.md              the spec, 1400+ lines, claims tagged by evidence tier
 SWEEP.md                 UI option sweep procedure + checklist (Kyle's plan)
 AUDIT.md                 evidence rules + what is NOT proven  <- governs PROTOCOL.md
-HANDOFF.md               this file
+docs/BENCH-NOTES.md      this file
 keycodes.json            519 keycodes, name -> value
 matrix.json              101 keys: index, row, col, addr, fixed physical legend
 enum_to_wire.json        app 24-bit enum -> 16-bit wire, + the 3 translation rules
