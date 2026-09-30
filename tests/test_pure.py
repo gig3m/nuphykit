@@ -11,7 +11,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from nuphykit import bootloader, data, keymap, lighting, log, spaces  # noqa: E402
+from nuphykit import bootloader, data, diag, keymap, lighting, log, spaces  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FW = os.path.join(ROOT, "firmware", "Air100v3_US_v1.0.6.6_20260723.bin")
@@ -105,6 +105,31 @@ check("log part 1 waits", log.decode(bytes([0xFE, 2, 0]) + part1, pend), None)
 check("log part 2 joins", log.decode(frame(0xFE, 2, 1, text=b" ======\n"), pend),
       part1.decode() + " ======")
 check("mode report", log.decode(frame(0xA2, 4, 1), pend), "[mode] layer 4  a2 04 01 20")
+
+print("\nwireless diag flagging")
+
+
+def run_keys(events, delay=250):
+    d = diag.Diag.__new__(diag.Diag)
+    d.show_keys, d.out, d.delay, d.t0 = False, None, delay, 0.0
+    d.down, d.last_up, d.flagged, d.stats = {}, {}, set(), {}
+    kinds = []
+    d.emit = lambda kind, msg, t=None: kinds.append(kind)
+    for t, code, v in events:
+        d.on_key("2.4g", code, v, t)
+    return kinds, d.stats.get("2.4g", {})
+
+
+K_R, K_E, K_SHIFT = 19, 18, 42
+check("normal typing unflagged",
+      run_keys([(0, K_R, 1), (0.08, K_R, 0), (0.2, K_E, 1), (0.27, K_E, 0)])[0], [])
+check("late key-up flagged once",
+      run_keys([(0, K_R, 1), (0.5, K_E, 1), (0.55, K_E, 0), (0.7, K_E, 1),
+                (0.75, K_E, 0), (0.9, K_R, 0)])[0], ["LATE-UP", "LONG"])
+check("held shift is not flagged",
+      run_keys([(0, K_SHIFT, 1), (0.6, K_E, 1), (0.65, K_E, 0), (0.9, K_SHIFT, 0)])[0], [])
+check("chatter flagged",
+      run_keys([(0, K_E, 1), (0.05, K_E, 0), (0.07, K_E, 1), (0.12, K_E, 0)])[0], ["CHATTER"])
 
 print("\nlighting byte map")
 st = bytes([0x06, 0x32, 0x02, 0x00, 0x01, 0x00, 0x00, 0x05, 0x80,

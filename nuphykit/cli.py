@@ -10,6 +10,7 @@
     uv run --with hidapi python -m nuphykit keycolor 255,0,0 W A S D --clear
     uv run --with hidapi python -m nuphykit cfg <space> <index> <value>
     uv run --with hidapi python -m nuphykit log [--raw] [--seconds N]
+    uv run --with hidapi python -m nuphykit diag [--seconds N] [--out FILE] [--show-keys]
 """
 from __future__ import annotations
 
@@ -18,7 +19,7 @@ import json
 import os
 import sys
 
-from . import data, keymap, lighting, log, spaces
+from . import data, diag, keymap, lighting, log, spaces
 from .device import COMMANDS, Device, NuPhyError
 
 SNAP = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -202,8 +203,18 @@ def main(argv=None):
     sp.add_argument("--raw", action="store_true", help="hex frames, undecoded")
     sp.add_argument("--seconds", type=float, help="stop after N seconds")
 
+    sp = sub.add_parser("diag", help="wireless timeline: key timing + link events + fw log")
+    sp.add_argument("--seconds", type=float, help="stop after N seconds")
+    sp.add_argument("--out", help="also append the timeline to this file")
+    sp.add_argument("--show-keys", action="store_true",
+                    help="print key codes in flagged events (hidden by default)")
+
     a = p.parse_args(argv)
     try:
+        if a.cmd == "diag":
+            out = open(a.out, "a") if a.out else None
+            diag.Diag(a.show_keys, out).run(a.seconds)
+            return 0
         if a.cmd == "log":
             # Plaintext reports: no handshake, so NuPhyIO's session survives.
             log.listen(a.raw, a.seconds)
