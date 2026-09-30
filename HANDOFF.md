@@ -303,6 +303,52 @@ Logs keydown **and keyup with hold durations** — that distinction is what
 separates a modifier being *held* from being *fired*, and it is how the Tap Dance
 question got settled. Raw array in `window.__log`.
 
+## Where we left off — wireless repeat investigation (2026-09-29)
+
+**The problem:** on 2.4G the Air100 V3 sometimes repeats a key (`rrrr...`) and
+drops the connection, including mid-sentence. Widely reported publicly.
+
+**Board and host state at close:**
+- Stock fw 1.0.6.6; Caps = `MT(HYPR, KC_ESC)` `0x2F29` both banks; Mac lighting
+  changed by the owner via Fn keys. Current backup: `kit_20260929-bothmodes`.
+- 2.4G re-paired and working (§82). **Dongle debug log left ON**
+  (`nuphykit dongle-debug off` to undo; one persisted flag, harmless).
+- Dongle sits alone on a CPU root port (bus 3) — the only place it has been
+  reliable on this machine. Host USB autosuspend is off for both devices.
+- Hyprland `repeat_delay` = 250 ms, so any key-up late by >250 ms repeats.
+
+**What is established:**
+- Mechanism class — lost/late key-up + host autorepeat — is well supported
+  (full-state reports; dongle releases ~1 s after silence; keyboard keep-alives
+  every ~600 ms mask that timer; a 3.5 s hold was delivered intact, T1).
+- Two clean `diag` baselines (1,500 presses): no faults, -59..-65 dBm, low retry %.
+  **No incident has been captured yet.**
+
+**Live hypotheses, none confirmed** (PROTOCOL §83-§84):
+1. **USB bandwidth contention at the dongle** — owner's field experience: moving
+   the dongle off shared buses fixes it. The dongle polls 6 interrupt endpoints at
+   1 ms (big periodic reservation behind a hub's TT); when IN sends fail it
+   retries then **flushes its queue, key-ups included** (`equal > max` /
+   `over send remove`). **Most likely; cheapest to test.**
+2. Radio fade → keyboard drops a key-up after 50 retries (`loss a key`), never
+   re-sent; keep-alives hold the stuck key until the next keypress. (~40 %, T2 only)
+3. Full RF disconnect/reconnect (`rf has disconnect`), keys typed meanwhile lost.
+4. Switch chatter (29 ms re-press seen once; debounce is `func[0]` x 10 ms = 20 ms).
+
+**Next steps, in order:**
+1. **Reproduce #1 on demand:** put the dongle in the bus-5 12M hub next to the
+   USB audio device, play audio, cable in for the keyboard log, type with
+   `python -m nuphykit diag --out ~/nuphy-diag.txt`. Dongle `RADIO` flush lines +
+   `LATE-UP` = confirmed. If confirmed: advise root-port placement; consider a
+   dongle patch that lengthens `bInterval` (descriptor at dongle `0x292E0`+).
+2. Otherwise run `diag` wherever it fails in daily use and read the `RADIO` lines.
+3. Only after an incident names the cause: firmware patch work — rehearse a stock
+   reflash on Linux first (`nuphykit/bootloader.py`), then patch. Candidates:
+   keyboard re-sends full state after a dropped report (#2); dongle release
+   timer byte `0x62ED` (`0x64`→`0x20`) only helps #3.
+4. Loose ends: verify `0x7001` clears the swap (§84); `0xD6` inactive-mode write
+   (static only); sleep bytes 4-5.
+
 ## Next work, in order
 
 1. ~~Config blobs `0x0900`/`0x0E00`/`0x1100`/`0x1400`~~ — RESOLVED, unallocated
