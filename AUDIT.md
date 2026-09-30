@@ -158,7 +158,8 @@ The earlier phrasing conflated "where I stopped" with "where data ends".
 
 ### B9. `golden.bin` was a contaminated baseline — **found 2026-08-08**
 Every "verified 0 differences" check in this project measured against a reference
-that carried 664 bytes of non-factory state, including `0xCDCD` / `0x2B2D`
+that carried 664 distinct bytes of non-factory state (666 counting the §56 knob
+alias mirror — PROTOCOL §59), including `0xCDCD` / `0x2B2D`
 corruption in bank 5 and `0x0306` in bank 3 left by the opcode-sweep incident.
 No conclusion depended on those bytes, but `0x0306` **was written up in §56 as
 genuine factory data**. Rebuilt from a true factory reset; see PROTOCOL §59.

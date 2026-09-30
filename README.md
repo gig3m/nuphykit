@@ -17,6 +17,8 @@ protocol — enough to build custom firmware.
 
 - **Hyper on Caps Lock** — and any modifier combination. The whole `0x0100`–`0x1FFF`
   range works; NuPhyIO never offers it.
+- **Tap/hold (mod-tap)** — e.g. Caps = tap **Esc**, hold **Hyper** (`0x2F29`), handy
+  for Vim. The firmware supports QMK mod-tap; NuPhyIO just never exposes it.
 - **Per-key RGB** — NuPhy built it (`0xD8` + a hidden lighting mode) and never
   exposed it. `nuphykit keycolor 255,0,0 W A S D` lights those keys red.
 - **Layer *locking*** — `TG(n)`. The board isn't momentary-only; NuPhy just never
@@ -72,6 +74,7 @@ python -m nuphykit restore mybackup
 
 python -m nuphykit layout                   # decode the whole keymap with legends
 python -m nuphykit hyper-caps               # Caps = Hyper, both banks
+python -m nuphykit hyper-caps --tap-esc     # Caps = tap Esc / hold Hyper
 python -m nuphykit key CAPS KC_A --both     # by legend + keycode name
 python -m nuphykit key r3c0 0x0F00 --both   # or by row/col, or raw slot number
 python -m nuphykit light --effect 6 --backlight 50

@@ -111,8 +111,14 @@ def cmd_key(dev, a):
 
 
 def cmd_hyper_caps(dev, a):
-    keymap.set_key_both_banks(dev, 54, keymap.HYPER)
-    print("Caps Lock = Hyper (0x0F00) in banks 0 and 4, so it survives the Mac/Win switch")
+    if a.tap_esc:
+        # Mod-tap works on this firmware (§22): tap = Esc, hold = Hyper.
+        kc, what = keymap.mt(keymap.HYPER, 0x29), "tap Esc / hold Hyper"
+    else:
+        kc, what = keymap.HYPER, "Hyper"
+    keymap.set_key_both_banks(dev, 54, kc)
+    print(f"Caps Lock = {what} (0x{kc:04X}) in banks 0 and 4, "
+          "so it survives the Mac/Win switch")
 
 
 def cmd_light(dev, a):
@@ -183,7 +189,10 @@ def main(argv=None):
     sp.add_argument("--force", action="store_true")
     sp.set_defaults(fn=cmd_key)
 
-    sub.add_parser("hyper-caps").set_defaults(fn=cmd_hyper_caps)
+    sp = sub.add_parser("hyper-caps")
+    sp.add_argument("--tap-esc", action="store_true",
+                    help="tap for Esc, hold for Hyper (mod-tap) - e.g. for Vim")
+    sp.set_defaults(fn=cmd_hyper_caps)
 
     sp = sub.add_parser("light")
     for f in ("effect", "backlight", "speed", "sidelight"):

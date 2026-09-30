@@ -1410,7 +1410,8 @@ uncontaminated baseline plus three differentials that were otherwise unreachable
 ### `golden.bin` had been contaminated for the whole project
 
 The pre-reset image differed from true factory in **666 bytes**, only 2 of which
-were intentional:
+were intentional. (666 counts the 2-byte knob alias window, which mirrors a
+keymap slot already counted below — **664 distinct bytes**, as AUDIT B9 says; §56.)
 
 | region | bytes | what |
 |--------|-------|------|

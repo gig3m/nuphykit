@@ -43,6 +43,8 @@ check("MO(5)", keymap.mo(5), 0x5225)
 check("TG(2)", keymap.tg(2), 0x5262)
 check("hyper mask", keymap.mods(True, True, True, True), 0x0F00)
 check("ctrl+c", keymap.mods(ctrl=True, keycode=0x06), 0x0106)
+check("MT(HYPR, ESC)", keymap.mt(keymap.HYPER, 0x29), 0x2F29)
+check("MT(Ctrl, X)", keymap.mt(keymap.mods(ctrl=True), 0x1B), 0x211B)
 
 print("\nslot / keycode resolution")
 check("legend CAPS", data.resolve_slot("CAPS"), 54)

@@ -127,6 +127,12 @@ def tg(n: int) -> int:
     return TG_BASE | n
 
 
+def mt(mod_mask: int, keycode: int) -> int:
+    """Mod-tap: tap sends `keycode`, hold applies the mods. Works on this
+    firmware (§22, T1). `mod_mask` is a mods() value, e.g. HYPER."""
+    return 0x2000 | (mod_mask & 0x1F00) | (keycode & 0xFF)
+
+
 def mods(ctrl=False, shift=False, alt=False, gui=False, keycode=0x00) -> int:
     """Build a modifier-mask keycode. The whole 0x0100-0x1FFF range works (§22)."""
     m = (0x01 if ctrl else 0) | (0x02 if shift else 0) \

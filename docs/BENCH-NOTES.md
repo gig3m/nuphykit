@@ -10,17 +10,20 @@ As of the **2026-09-29 re-verification** (Linux host, cable mode):
 
 - **Stock firmware** 1.0.6.6 — USB serial `NuPhy Keybord 0720`. The modified
   `0721` image (§69) is no longer on the board.
-- Application firmware, PID `0x102D`, four USB interfaces carrying six HID
-  top-level collections
-- **The keymap is the owner's own configuration, not `golden.bin`** (1,117 bytes
-  differ: Caps = `KC_ESC`, bottom-right modifiers rearranged, macro arena
-  rewritten). Since 2026-09-29 Caps = `MT(HYPR, KC_ESC)` `0x2F29` in banks 0 and
-  4 (tap Esc, hold Hyper). `snapshots/kit_20260929-mtcaps.json` is the current
-  full backup (`kit_20260929-verify.json` = the same minus that change).
+- Application firmware, PID `0x102D`, four USB interfaces. hidapi lists them as
+  6 entries on Linux and 7 on macOS, which also reports the mouse collection's
+  nested Pointer usage (PROTOCOL §70) — same device, different enumeration
+- **The keymap is the owner's current Linux setup, not `golden.bin`.**
+  `golden.bin` was built when a Mac was the owner's desktop (Caps = plain
+  Hyper). Now the host is Linux and Caps must give **Esc for Neovim**: Caps =
+  `MT(HYPR, KC_ESC)` `0x2F29` in banks 0 and 4 — **tap Esc, hold Hyper** (T1,
+  2026-09-29). Bottom-right modifiers and the macro arena are also the owner's.
+  Current full backup: `snapshots/kit_20260929-bothmodes.json` (both Mac/Win
+  records). Lighting is changed with Fn keys, so `light@mac` drift is normal.
   **Do not run `tools/restore.py --fix`** — it would revert all of that to golden.
 - `snapshots/factory.bin` is still the true factory image (`GetDefaultKeys`
   matches it byte for byte, T2); `golden.bin` = factory + **4 bytes** (Hyper on
-  Caps in banks 0 *and* 4) and is now history.
+  Caps in banks 0 *and* 4) — the old Mac-desktop layout, now history.
   `golden_pre_reset_contaminated.bin` — **never restore it**, it carries
   opcode-sweep damage (PROTOCOL §59).
 - The firmware Ctrl/Caps swap (HAZARD 9) was **cleared by the factory reset** of
@@ -29,7 +32,7 @@ As of the **2026-09-29 re-verification** (Linux host, cable mode):
 Verify at any time:
 
 ```
-cd ~/Projects/nuphy-re && uv run --with hidapi python -m nuphykit verify 20260929-mtcaps
+cd ~/Projects/nuphy-re && uv run --with hidapi python -m nuphykit verify 20260929-bothmodes
 ```
 
 The 2026-09-29 pass re-ran every read-only claim, reversible write tests on bank
