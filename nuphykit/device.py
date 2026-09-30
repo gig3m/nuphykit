@@ -23,6 +23,7 @@ else:
 VID = 0x19F5
 PID_APP = 0x102D          # application firmware
 PID_UPGRADER = 0x072D     # bootloader ("Air100 V3 Upgrader")
+PID_DONGLE = 0x2620       # 2.4G receiver - its own firmware, forwards nothing (§83)
 
 FLAG_CMD = 0x55           # host -> device
 FLAG_REPLY = 0xAA         # device -> host
@@ -86,6 +87,15 @@ class Device:
                 "opening NuPhyIO, which detects and reflashes automatically."
             )
         raise NuPhyError("Air100 V3 not found (is it plugged in?)")
+
+    @staticmethod
+    def find_dongle() -> bytes:
+        """The DONGLE's raw interface. Same frame format, but every command is
+        answered by the dongle itself - nothing reaches the keyboard (§83)."""
+        for d in hid.enumerate(VID, PID_DONGLE):
+            if d.get("usage_page") == 0x01 and d.get("usage") == 0x00:
+                return d["path"]
+        raise NuPhyError("Air100 V3 dongle not found")
 
     # -- framing ---------------------------------------------------------
     def frame(self, cmd: int, payload: list[int]) -> bytes:

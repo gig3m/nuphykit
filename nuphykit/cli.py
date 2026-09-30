@@ -11,6 +11,7 @@
     uv run --with hidapi python -m nuphykit cfg <space> <index> <value>
     uv run --with hidapi python -m nuphykit log [--raw] [--seconds N]
     uv run --with hidapi python -m nuphykit diag [--seconds N] [--out FILE] [--show-keys]
+    uv run --with hidapi python -m nuphykit dongle-debug [on|off]
 """
 from __future__ import annotations
 
@@ -209,8 +210,20 @@ def main(argv=None):
     sp.add_argument("--show-keys", action="store_true",
                     help="print key codes in flagged events (hidden by default)")
 
+    sp = sub.add_parser("dongle-debug", help="read/set the dongle's persistent debug-log flag")
+    sp.add_argument("state", nargs="?", choices=["on", "off"])
+
     a = p.parse_args(argv)
     try:
+        if a.cmd == "dongle-debug":
+            # Talks to the DONGLE, not the keyboard. 0xFE persists one flag word
+            # in the dongle's data flash; nothing else is written (§83).
+            with Device(Device.find_dongle()) as dongle:
+                if a.state:
+                    dongle.send(0xFE, [0, 0, 0, 0, 1 if a.state == "on" else 0], wait=0.3)
+                flag = dongle.request(0xFD, [0, 0, 0, 0], want=1)
+                print(f"dongle debug log: {'on' if flag and flag[0] else 'off'}")
+            return 0
         if a.cmd == "diag":
             out = open(a.out, "a") if a.out else None
             diag.Diag(a.show_keys, out).run(a.seconds)

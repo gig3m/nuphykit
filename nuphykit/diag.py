@@ -8,8 +8,10 @@ against what the keyboard's radio reported at the time (§82).
 Sources, all read-only:
   evdev      every NuPhy input node - dongle (2.4G), Bluetooth, cable. Nodes
              appearing/vanishing are logged as link events.
-  raw        the keyboard's raw interface over the cable, if plugged in - the
+  fw         the keyboard's raw interface over the cable, if plugged in - its
              firmware debug log (0xFE) and state reports. No handshake.
+  dongle     the dongle's own debug log, if enabled (`nuphykit dongle-debug on`):
+             queue flushes and channel hops on the receiver side (§83).
 
 Key identities are hidden unless --show-keys: the tool needs timing, not text.
 """
@@ -67,8 +69,8 @@ class Diag:
         self.delay = repeat_delay_ms()
         self.t0 = time.time()
         self.fds: dict[int, tuple[str, str]] = {}   # fd -> (path, link)
-        self.raw = None
-        self.pending: list[str] = []
+        self.raws: dict[str, object] = {}          # "fw"/"dongle" -> hid handle
+        self.pending: dict[str, list[str]] = {"fw": [], "dongle": []}
         self.down: dict[tuple[str, int], float] = {}
         self.last_up: dict[tuple[str, int], float] = {}
         self.flagged: set[tuple[str, int]] = set()   # late-up already reported
@@ -112,13 +114,16 @@ class Diag:
                 if link not in appeared:     # one device brings several nodes
                     appeared.add(link)
                     self.count(link, "reconnects")
-        if self.raw is None:
+        for src, find, what in (("fw", Device._find, "keyboard firmware log (cable)"),
+                                ("dongle", Device.find_dongle, "dongle log")):
+            if src in self.raws:
+                continue
             try:
                 h = hid.device()
-                h.open_path(Device._find())
+                h.open_path(find())
                 h.set_nonblocking(1)
-                self.raw = h
-                self.emit("link", "cable raw interface open - firmware log live")
+                self.raws[src] = h
+                self.emit("link", f"listening: {what}")
             except (NuPhyError, OSError):
                 pass
 
@@ -179,18 +184,18 @@ class Diag:
             if typ == EV_KEY:
                 self.on_key(link, code, value, sec + usec / 1e6)
 
-    def read_raw(self):
+    def read_raw(self, src: str):
         try:
             while True:
-                r = self.raw.read(REPORT_LEN)
+                r = self.raws[src].read(REPORT_LEN)
                 if not r:
                     return
-                line = log.decode(bytes(r), self.pending)
+                line = log.decode(bytes(r), self.pending[src])
                 if line is not None:
-                    self.emit("fw", line)
+                    self.emit(src, line)
         except OSError:
-            self.raw = None
-            self.emit("link", "cable raw interface lost")
+            del self.raws[src]
+            self.emit("link", f"{src} raw interface lost")
 
     # -- main loop -------------------------------------------------------
     def run(self, duration: float | None = None):
@@ -206,8 +211,8 @@ class Diag:
                 for fd in r:
                     if fd in self.fds:
                         self.read_evdev(fd)
-                if self.raw is not None:
-                    self.read_raw()
+                for src in list(self.raws):
+                    self.read_raw(src)
                 if time.time() >= next_scan:
                     self.rescan()
                     next_scan = time.time() + RESCAN_S
@@ -217,8 +222,8 @@ class Diag:
             self.summary()
             for fd in list(self.fds):
                 os.close(fd)
-            if self.raw is not None:
-                self.raw.close()
+            for h in self.raws.values():
+                h.close()
 
     def summary(self):
         self.emit("summary", "per link: " + ("; ".join(

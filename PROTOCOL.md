@@ -2998,3 +2998,65 @@ Conclusions:
 - `0x2F GetDongelName` returns `01 ff ff...` with the dongle connected, so §51's
   "no dongle attached" reading was wrong. **[T2]**
 
+## 83. The 2.4G dongle — its own firmware, forwards nothing [T2, spot-checked T2 live]
+
+The receiver (VID `0x19F5` PID `0x2620`) runs **separate firmware**, also
+published: `keyBoardList` gives the Air100 V3 `dongleIds: 1930094682698977282`,
+and `getLastFirmwareVersionsByType?businessId=1930094682698977282&type=1`
+returns **4.0.5.6** (`dongle_4.0.5.bin`, 172,852 B, sha256 `77b10b42…4762`
+matching the API). Same platform as the keyboard: CH58x, `CH58x_BLE_LIB_V2.0`,
+unencrypted, base `0x13000`; descriptor at `0x292E0` confirms `19F5:2620`.
+
+### Its raw interface answers everything locally
+
+Same `0x55` frame, same XOR/checksum (parser `0x26F8`, a compare chain, no table).
+**No opcode is forwarded to the keyboard** — there is no path from the USB
+parser to radio TX. The whole handler set:
+
+| opcode | behaviour |
+|--------|-----------|
+| `0xEE` | handshake; key = raw frame byte `0x1C`, **no** length/non-zero check |
+| `0xEF` | **bootloader entry** — writes `0x55` to data-flash 0 and resets. **Never send.** |
+| `0xA1` | constant `05 00 04 aa 06 00` — **confirmed live** |
+| `0xE4` | TestDelayTime echo |
+| `0xFD` | GetDebugEnable — debug flag; `00` out of the box — **confirmed live** |
+| `0xFE` | SetDebugLog — sets the flag and **persists** it (data-flash offset 4) |
+| other  | status `0xFF`, payload echoed: `0xA0`, `0x2F`, all `B*`/`C*`/`D*` |
+
+So NuPhyIO cannot configure the board *through* the dongle with these frames, and
+the keyboard's `0xFE`/`0xA2`/`0xD7` reports never reach the host over 2.4G (the
+RF→USB path accepts only the three HID report kinds; anything else is logged
+"undeal data" and dropped). **Keyboard telemetry over 2.4G needs the cable (§82).**
+
+### The dongle's own log
+
+With the flag on (`nuphykit dongle-debug on`; off by default, persists across
+replug), the dongle emits the same `fe <parts> <idx> <text>` plaintext frames.
+It has **no RSSI or error-rate output** — those live only on the keyboard — but
+does log channel hops (`jump to channel`, `hop success, save channel`,
+`rollback to flash channel`), RF errors (`error onne`), and its USB-side
+failures (below). A quiet link logs nothing: 20 s with the flag on produced no
+frames. RX counters exist at `gp-0x684/-0x688/-0x68C` but are never exported.
+
+### What this means for wireless key repeat
+
+- **Key-up is implicit.** Reports are full-state (8-byte boot / 19-byte NKRO /
+  mouse+consumer); a release is simply a later report without the key.
+- **Every data packet is acked** at application level; duplicates are dropped by
+  a 32-bit sequence number compared with the last delivered one. Retransmission
+  is keyboard-driven.
+- **Link-loss release after ~1 s.** Each valid RX re-arms a `0x640`-tick (~1.0 s)
+  timer; if it fires, the dongle injects an all-zero report (unless the host has
+  suspended USB). So a key held at a dropout is released about a second later.
+  **With Hyprland's 250 ms repeat delay and 40/s rate that is ~30 repeats** — the
+  size of the observed `rrrr` bursts. A 1 s dropout mid-keypress is therefore the
+  prime suspect. [T4 — not yet caught live]
+- **The dongle can drop a key-up itself** when its USB side is blocked: a failed
+  IN send retries 5× (~2 ms) then 4× (~1.5 s, `equal > max`), then **flushes the
+  whole 200-report queue** (`over send remove`); a full queue also flushes
+  (`queue is full`). Those strings in the dongle log would pin a repeat on the
+  receiver rather than the radio.
+
+`nuphykit diag` merges the keyboard log (cable), the dongle log, and evdev key
+timing into one timeline for catching an incident.
+
