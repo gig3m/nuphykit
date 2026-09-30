@@ -45,11 +45,15 @@ def cmd_show(dev, a):
     print(f"  lighting   {lighting.describe(spaces.read(dev, 'light'))}")
     print("\n  NOT captured by any of these: the firmware Ctrl<->Caps swap "
           "(PROTOCOL 58) is persistent and unreadable.")
+    print("  lighting shown is the ACTIVE Mac/Win mode only; the other mode has "
+          "its own record (PROTOCOL 62).")
 
 
 def cmd_backup(dev, a):
     json.dump(spaces.snapshot(dev), open(_path(a.name), "w"), indent=1)
     print(f"backed up all {len(spaces.SPACES)} spaces -> {_path(a.name)}")
+    print("  lighting covers the ACTIVE Mac/Win mode only - flip the switch and "
+          "back up again under another name to keep the other mode's lighting")
 
 
 def cmd_verify(dev, a):

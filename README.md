@@ -19,6 +19,8 @@ protocol — enough to build custom firmware.
   ships a toggle keycode. Layer chaining works 3 deep.
 - **Backup/restore of everything.** The board keeps settings in **five separate
   places**; tools that read only the keymap silently lose the other four.
+  (Lighting is additionally kept per Mac/Win mode, and only the active mode is
+  readable — back up in both switch positions.)
 - **Writes to both Mac and Windows banks**, so a remap survives the physical
   Mac/Win switch (which selects the base bank *live*).
 
@@ -29,6 +31,12 @@ No install. Requires `hidapi`, pulled on demand with [uv](https://docs.astral.sh
 ```bash
 uv run --with hidapi python -m nuphykit show
 ```
+
+On Linux the `hidraw` backend (bundled with `hidapi`) is used automatically;
+the default libusb backend can't see HID usage pages, so it can't find the
+raw interface. The CLI talks over the USB cable; it works with the board in
+2.4G mode too (keystrokes then arrive via the dongle). Configuring through the
+dongle alone is untested.
 
 Quit NuPhyIO isn't required, but note that any CLI command orphans the app's
 session until you reload it (see Hazards).
@@ -55,11 +63,11 @@ python -m nuphykit commands                 # NuPhy's own command names
 
 | space | get/set | size | granularity |
 |-------|---------|------|-------------|
-| `config` | `0xB2`/`0xB3` | `0x1C00` | arbitrary, 16-bit aligned |
+| `config` | `0xB2`/`0xB3` | `0x1C00` | whole 16-bit words (a 1-byte write writes 2) |
 | `func` | `0xE1`/`0xE2` | 4 | single byte |
 | `sleep` | `0xF3`/`0xF5` | 4 (6 internally) | **whole record only** |
 | `appdefine` | `0xFB`/`0xFC` | `0x03BA` | single byte |
-| `light` | `0xD5`/`0xD6` | 17 | **whole record only** |
+| `light` | `0xD5`/`0xD6` | 17 **per Mac/Win mode** | single byte; active mode only |
 
 A factory reset clears all five. A **firmware flash preserves all five.**
 
@@ -69,14 +77,19 @@ All from static analysis of the (freely downloadable) firmware image — no
 teardown:
 
 - **Command dispatch table** — 42 commands, incl. 3 the app never sends
-  (`0xD8` per-key RGB, `0xC4` macro-maintenance, `0xF4` switch re-read).
+  (`0xD8` per-key RGB, `0xC4` macro-maintenance, `0xF4` RAM-only auto-sleep toggle).
 - **Matrix pin map** — `matrix_pins.json` (rows `PB16/17/18/20/21/22`, 18 cols).
 - **LED driver** — 2× AW20216S-class over SPI; per-LED channel map in
   `led_map.json`.
 - **Flash protocol** — reimplemented and verified byte-for-byte vs NuPhyIO
   (`nuphykit/bootloader.py`).
-- The Mac/Win switch is GPIO `PA5`; the tap-hold limitation is a
-  register-then-unregister pair (every action fires discretely).
+- **CORRECTED 2026-09-29 [T2]:** `PA5`/`PA6` are the knob's rotary-encoder
+  lines (QMK encoder table at `0x3FC84`), not the Mac/Win switch, which is still
+  unlocated. The tap-dance code *does* have a hold path (register on timeout,
+  unregister on key-up; 100 ms floor on the timing field), so the tap-hold
+  limitation is not explained by the firmware code (PROTOCOL §73, §79).
+- `0xE3`/`0xE5`/`0xE6` (debounce, touch-bar) are no-op acks in 1.0.6.6 — 38
+  functional handlers plus the `0xEE` handshake (§76).
 
 ## Custom firmware — proven possible, recoverable on-device
 
@@ -110,7 +123,8 @@ no CH58x support). See `PROTOCOL.md` §70–§71.
 
 1. **Never sweep opcodes.** A "benign" payload is a valid write, and `0xEF`
    enters the bootloader.
-2. **Writes must be 16-bit aligned.**
+2. **Config writes must be whole 16-bit words** — a 1-byte write clobbers the
+   next byte, at even addresses too.
 3. **Never hold a capture only in page memory** — the page reloads when the
    device re-enumerates.
 4. **Power cycling does not exit the bootloader**; only a reflash does (NuPhyIO
@@ -118,7 +132,9 @@ no CH58x support). See `PROTOCOL.md` §70–§71.
 5. **Any CLI command orphans NuPhyIO's session** — its writes are ack'd and
    discarded until you reload the app.
 6. **Host-side remappers corrupt results.** Raycast's Hyper Key on Caps Lock
-   silently inverted a test result for four rounds.
+   silently inverted a test result for four rounds. On Linux, read keypresses
+   from `/dev/hidraw*` instead — below every remapper (the dongle's nodes in
+   2.4G mode).
 
 ## Tests
 

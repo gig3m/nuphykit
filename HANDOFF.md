@@ -6,28 +6,35 @@ configurator that fixes what NuPhy left out.
 
 ## Board state right now
 
-- **Running MODIFIED firmware** (`firmware/Air100v3_MODIFIED_serial0721.bin`):
-  NuPhy 1.0.6.6 with one byte changed at `0x42650`, so it reports USB serial
-  `NuPhy Keybord 0721` instead of `0720`. Typing confirmed normal. This proves
-  the bootloader does not validate images (§69). Reflash
-  `Air100v3_US_v1.0.6.6_20260723.bin` to return to stock.
-- Application firmware, PID `0x102D`, all six HID interfaces present
-- **Factory reset applied 2026-08-08.** `snapshots/factory.bin` is the true
-  factory image; `golden.bin` = factory + **4 bytes** (Hyper on Caps in banks 0
-  *and* 4). `golden_pre_reset_contaminated.bin` is history — **never restore it**,
-  it carries opcode-sweep damage (PROTOCOL §59).
-- **Verified 0 differences** vs `snapshots/golden.bin`
-- Caps Lock = `0x0F00` (Hyper), now in **both** base banks so the Mac/Win switch
-  cannot take it away. This is **keyboard-native** Hyper; Raycast's Hyper Key was
-  disabled 2026-08-08 after it was found contaminating tests (HAZARD 8)
-- The firmware Ctrl/Caps swap (HAZARD 9) was **cleared by the factory reset**
+As of the **2026-09-29 re-verification** (Linux host, cable mode):
+
+- **Stock firmware** 1.0.6.6 — USB serial `NuPhy Keybord 0720`. The modified
+  `0721` image (§69) is no longer on the board.
+- Application firmware, PID `0x102D`, four USB interfaces carrying six HID
+  top-level collections
+- **The keymap is the owner's own configuration, not `golden.bin`** (1,117 bytes
+  differ: Caps = `KC_ESC`, bottom-right modifiers rearranged, macro arena
+  rewritten). Since 2026-09-29 Caps = `MT(HYPR, KC_ESC)` `0x2F29` in banks 0 and
+  4 (tap Esc, hold Hyper). `snapshots/kit_20260929-mtcaps.json` is the current
+  full backup (`kit_20260929-verify.json` = the same minus that change).
+  **Do not run `tools/restore.py --fix`** — it would revert all of that to golden.
+- `snapshots/factory.bin` is still the true factory image (`GetDefaultKeys`
+  matches it byte for byte, T2); `golden.bin` = factory + **4 bytes** (Hyper on
+  Caps in banks 0 *and* 4) and is now history.
+  `golden_pre_reset_contaminated.bin` — **never restore it**, it carries
+  opcode-sweep damage (PROTOCOL §59).
+- The firmware Ctrl/Caps swap (HAZARD 9) was **cleared by the factory reset** of
+  2026-08-08
 
 Verify at any time:
 
 ```
-cd ~/projects/nuphy-re && uv run --with hidapi python tools/restore.py
-# add --fix to repair any drift back to golden
+cd ~/projects/nuphy-re && uv run --with hidapi python -m nuphykit verify 20260929-mtcaps
 ```
+
+The 2026-09-29 pass re-ran every read-only claim, reversible write tests on bank
+7, and T1 keypresses captured as raw HID reports from `/dev/hidraw*` (below any
+host remapper). Corrections it forced are made in place and dated.
 
 ## Layout
 
@@ -86,8 +93,10 @@ whether the firmware *implements* a keycode needs T1.
 1. **Never sweep opcodes.** A "benign" 4-byte payload `[0x02,0x00,0x00,0x00]` is
    a *valid write command* — sweeping sent `0xB3` = "write 2 bytes at address 0"
    and corrupted ESC. And some opcode in `0x40`–`0xFF` **enters the bootloader**.
-2. **Writes must be 16-bit aligned.** A length-1 write at an odd address corrupts
-   the neighbouring byte.
+2. **Config writes must be whole 16-bit words.** A length-1 `0xB3` write always
+   writes two bytes — the second is garbage — at **even addresses too**, not just
+   odd (re-tested 2026-09-29). `nuphykit cfg config` now read-modify-writes the
+   aligned word. `0xE2`/`0xFC`/`0xD6` take genuine single-byte writes.
 3. **Never hold a capture only in page memory.** The app reloads when the device
    re-enumerates; that lost a 20,092-frame firmware-flash capture. Persist
    incrementally (localStorage chunks or a local HTTP sink).
@@ -117,9 +126,13 @@ whether the firmware *implements* a keycode needs T1.
    ps aux | grep -iE 'karabiner|hyperkey|bettertouch|keyboardmaestro|kanata'
    ```
 
-   Tell: the keyboard's own `0x0F00` sets four mod bits across successive HID
-   reports, so keydowns arrive **staggered** and build up. A software remapper
-   injects all four in **one atomic event**. Staggered = keyboard, atomic = host.
+   **CORRECTED 2026-09-29:** there is no timing tell. Raw HID capture shows the
+   keyboard's own `0x0F00` sends all four mod bits in **one report** — the
+   "staggered keydowns" seen in the browser were macOS splitting that report into
+   per-modifier events. Staggered-vs-atomic cannot tell keyboard from host [T1].
+   The reliable method is to read the reports below the OS: on Linux,
+   `/dev/hidraw*` (user-readable via the seat ACL); in cable mode the keys arrive
+   on the NuPhy's own nodes, in 2.4G mode on the **dongle's** (PID `0x2620`).
    Prefer plain-letter probes — no remapper targets `KC_M`.
 9. **The board can apply a firmware Ctrl<->Caps swap that the keymap does not
    show** (PROTOCOL §58). While active, a key storing `KC_LCTRL` emits
@@ -179,8 +192,13 @@ config memory 0x0000-0x1BFF  0xB2/0xB3   keymap, macros, SOCD/TapDance/TGL
 keyboard func 4 bytes        0xE1/0xE2   wobbliness, disable Win/AltF4/AltTab
 sleep cfg     4 bytes        0xF3/0xF5   auto-sleep, level-1/2 minutes   [whole record]
 appdefine     0x03BA bytes   0xFB/0xFC   app scratch; 0xA8 = knob/button
-lighting      17 bytes       0xD5/0xD6   effect, brightness, speed, RGB   [whole record]
+lighting      17 bytes       0xD5/0xD6   effect, brightness, speed, RGB   [ACTIVE MODE ONLY]
 ```
+
+**Lighting is stored per Mac/Win mode** (found 2026-09-29, T1): flipping the
+switch makes the board push a `0xD7` report carrying a *different* 17-byte
+record, and `0xD5` reads whichever mode is active. A backup taken in one switch
+position therefore misses the other mode's lighting — back up in both.
 
 **`tools/nuphykit.py` covers all five at once** — `show` / `backup` / `verify` /
 `restore`. Use it, not `restore.py`, for anything calling itself a backup.
@@ -222,10 +240,14 @@ slot 13, the position's ordinary key. All three are plain keymap entries, so a
 configurator needs no special knob path. The knob can be seated **upside down**;
 the firmware signals that by flashing the top-row LEDs instead of acting.
 
-The one real firmware gap: **anything needing tap-vs-hold timing.** `TT(n)`
-degrades to momentary, QMK mod-tap discards the tap, and NuPhy's Tap Dance
-long-press **fires discretely rather than holding** — so tap-Escape/hold-Hyper on
-one key is unreachable.
+~~The one real firmware gap: anything needing tap-vs-hold timing.~~
+**CORRECTED 2026-09-29 [T1]:** QMK mod-tap **works** — `MT(Ctrl, X)` = `0x211B`
+emitted `x` on tap and held Ctrl (no `x`) on a 2 s hold, captured as raw HID.
+So tap-Escape/hold-Hyper **is** reachable: `MT(HYPR, KC_ESC)` = `0x2F29` —
+confirmed T1 on Caps (tap Esc, hold Hyper, Hyper+M).
+`TT(n)` degrading to momentary and Tap Dance long-press firing discretely are
+the earlier observations and were not re-tested (the firmware *does* contain a
+hold path for Tap Dance — PROTOCOL §79).
 
 ## KNOCKLIST — needs Kyle
 

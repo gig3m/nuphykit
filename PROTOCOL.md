@@ -447,6 +447,14 @@ rules out a RAM-cache-reload explanation — the switch selects, it does not mer
 trigger a reload. Config memory is **byte-identical** across a flip (full-image
 diff, 0 differences), so the switch writes nothing; it is a pure runtime selector.
 
+**Re-confirmed 2026-09-29 [T1]** from raw HID reports on Linux: slot 69 (`KP_5`)
+= `q` in bank 0 / `z` in bank 4 gave `q`, `z`, `q` across Mac→Win→Mac. Each flip
+also pushes two unsolicited frames on the raw interface: `0xA2 ModeStateChange`
+(`a2 04 01` entering Win, `a2 00 00` back to Mac) and `0xD7 LightStateChange`
+carrying a **different lighting record per mode** — see §62. `0xA2` also fires
+on `TG(n)` with the active layer (`a2 02` / `a2 00`), so it is a live layer
+indicator a host tool can listen for.
+
 Earlier phrasing cited Fn holding `MO(1)` in bank 0 and `MO(5)` in bank 4. That
 is true (T2) but it only shows the banks *contain* a Mac and a Windows map — it
 never showed the switch is what selects them. It was tagged CONFIRMED for three
@@ -506,10 +514,16 @@ block, `0x7E00` QK_KB, `0x7F00` QK_USER). NuPhy put their function keys in QK_KB
 | `MO(n)` | `0x5220` | **works** (factory Fn) |
 | `TG(n)` | `0x5260` | **works — toggles and holds** |
 | `TT(n)` | `0x52C0` | degrades to momentary |
-| `MT(mod,kc)` | `0x2000` | mods applied, tap half discarded |
+| `MT(mod,kc)` | `0x2000` | ~~mods applied, tap half discarded~~ **works — tap and hold** (CORRECTED 2026-09-29, T1) |
 
-**The pattern: everything works except anything needing tap-vs-hold timing.**
-NuPhy removed that machinery and substituted their own Tap Dance (§13).
+~~**The pattern: everything works except anything needing tap-vs-hold timing.**~~
+**CORRECTED 2026-09-29 [T1]:** mod-tap works. `MT(Ctrl, X)` = `0x211B` on `KP_7`,
+captured as raw HID reports: a tap emitted `x` (press+release in one burst on key
+release); a 2 s hold emitted Ctrl alone for the whole hold, no `x`. So tap-vs-hold
+timing *is* implemented for mod-tap. `MT(HYPR, KC_ESC)` = `0x2F29` on Caps gives
+**tap = Esc, hold = Hyper, hold+`M` = Hyper+M** — confirmed the same way [T1]. `TT(n)` was not re-tested.
+Also re-confirmed T1 in the same pass: `HYPR`, `LSFT(KC_A)` = `0x0204`, `TG(2)`
+with its escape, and `0x5600` (no report at all).
 
 ### 22.1 Layer locking works — the trap is the escape key
 
@@ -899,10 +913,17 @@ A full 220-byte layer is ~5 packets instead of 110. **[CONFIRMED, T2]**
 
 ## 44. Writes are 16-bit word aligned — HAZARD
 
-A length-1 write at an **odd** address corrupts the adjacent byte. Observed while
+A length-1 write ~~at an **odd** address~~ corrupts the adjacent byte. Observed while
 repairing state: single-byte writes at 0x0029, 0x002B ... left 0xF9 in the
 neighbouring high bytes. Re-running the repair with addresses aligned down to
 even and lengths rounded up to even produced **0 differences**.
+
+**CORRECTED 2026-09-29 [T2]:** it is not about odd addresses. A length-1 `0xB3`
+write **always writes two bytes**, the second being garbage (`0xC1` in the test):
+`len=1` at even `0x0644` gave `2a c1`, at odd `0x0645` gave `00 2a c1` — the
+following byte clobbered both times. `nuphykit.spaces.set_byte` now
+read-modify-writes the aligned word. `0xE2`, `0xFC` and `0xD6` take genuine
+single-byte writes (neighbours verified unchanged).
 
 **Always write at even addresses with even lengths.** **[CONFIRMED, T2]**
 
@@ -1585,7 +1606,7 @@ Effect list in UI order (1-based): Ray, Stair, Static, Breath, Flower, Wave,
 Ripple, Spout, Galaxy, Rotation, Ripple, Point, Grid, Time, Rain, Ribbon, Gaming,
 Identify, Windmill, Diagonal. (Two entries are both labelled "Ripple".)
 
-### `0xD6 SetLightState` needs the whole 17-byte record
+### ~~`0xD6 SetLightState` needs the whole 17-byte record~~ — CORRECTED
 
 Restoring the original state in one write produced an **exact** readback match:
 
@@ -1593,8 +1614,18 @@ Restoring the original state in one write produced an **exact** readback match:
 0xD6  <len=0x11> <addr=0x0000> <pad>  06 32 02 00 01 00 00 05 80 04 3C 02 01 00 FF 00 00
 ```
 
-Same rule as `0xF5` (§61): these record-oriented Sets do not accept partial
-writes. `0xE2` and `0xFC` do. **Read-modify-write is the safe default.**
+~~Same rule as `0xF5` (§61): these record-oriented Sets do not accept partial
+writes.~~ **CORRECTED 2026-09-29 [T2]:** that was inferred from `0xF5`, never
+tested. `0xD6` **does** apply partial writes: `len=1, addr=1` set backlight
+`0x32`→`0x3C`, and `len=1, addr=2` set speed `04`→`01`, each with every other
+byte unchanged. (`0xF5` does discard partial writes — re-confirmed.)
+
+**The record is per Mac/Win mode [T1].** Flipping the switch pushes `0xD7
+LightStateChange` with a different record (on this board: Mac
+`06 32 04 00 01 00 00 05 80 01 01 02 00 00 ff 6d 1e`, Win
+`06 32 02 00 01 00 00 05 80 04 3c 02 01 00 ff 00 00`), and `0xD5` returns the
+active mode's. A backup made in one switch position does not contain the other
+mode's lighting. Whether `0xD6` can address the inactive mode is **unprobed**.
 
 ### `0xD2` confirms §54 from the app side
 
@@ -1806,6 +1837,12 @@ prologue-matching heuristic across candidate bases was **inconclusive** (best 5/
 because a linear sweep misaligns at arbitrary offsets. So `0x13000` rests on the
 stack argument alone. **[T4]**
 
+> **CORRECTED 2026-09-29 [T2]:** Now firmly supported (§74's thunk pointers, plus
+> the startup copy loop at `0x2318` targets `BASE + 0x1FFED000` = exactly
+> `0x20000000`, RAM start, at base `0x13000`). Note `fwtool.py base` prints
+> "sp setup not found" on this image — it only scans the first 40 decoded
+> instructions, and the `sp` setup is at `0x2308`; the derivation above was manual.
+
 **This does not affect most analysis**: for flash-internal references the base
 cancels, since an `auipc`+`addi` pair at file offset P targets file offset
 `P + (hi<<12) + lo` regardless of load address. All cross-references below were
@@ -1821,7 +1858,7 @@ derived that way.
 | `0x0675A`, `0x0686A`, `0x06EB6`, `0x06F8A` | keymap lookup (`Keymap ID out of range: %d`) |
 | `0x06782` | `Unknown priority level: 0x%02X` |
 | **`0x06B1E`** | **tap-hold logic** (`more tap hold`) |
-| `0x09AF8` | **`set_led(index, r, g, b)`** — see below |
+| `0x09AF8` | **`set_led(index, r, g, b)`** thunk -> real function `0x02D5C` (§74) — see below |
 | `0x0CFEC` | device-name formatting (`Air100 V3`, `%s-%d`) |
 | `0x0D6B8`, `0x0D724` | per-LED loops, `0..118` |
 | `0x0F5BE`-`0x1A6xx` | BLE + 2.4 GHz RF stack |
@@ -1843,15 +1880,20 @@ offset **`0x09AF8`**:
 0x0D724  li s1, 0x77          ; same loop, a1=a2=a3=0  -> clear all to black
 ```
 
-So `set_led(index, r, g, b)` at `0x09AF8` is the primitive the whole lighting
-engine sits on — the hook point for any custom effect work.
+So `set_led(index, r, g, b)` is the primitive the whole lighting engine sits on —
+the hook point for any custom effect work. **CORRECTED 2026-09-29 [T2]:**
+`0x09AF8` is only a jump thunk (pointer at `0x409BC`); the function body is at
+**`0x02D5C`** (§74).
 
 ### USB / HID descriptors (file `0x42600`-`0x43200`)
 
 ```
 device:  12 01 10 01 00 00 00 40 F5 19 2D 10 00 00 01 02 03 01
          USB 1.10, EP0 64B, VID 0x19F5, PID 0x102D, 1 configuration
-product string: "NuPhy Keybord 0720"     (NuPhy's own typo)
+serial string (iSerial=3): "NuPhy Keybord 0720"     (NuPhy's own typo)
+    CORRECTED 2026-09-29 [T2]: was labelled "product string"; the GET_DESCRIPTOR
+    code returns it for string index 3 (0x15B44), and the device descriptor's
+    iSerial = 3 — matching the serial observed in §69.
 ```
 
 Report descriptors found: mouse (report ID 2), system control (3), consumer (4),
@@ -2253,7 +2295,7 @@ RAM:    sp = 0x20008000                                          -> 32 KB @ 0x20
 
 Items 2 and 3 are the real work and cannot be answered from the firmware image
 alone; they need either a teardown, continuity probing, or disassembly of the
-matrix-scan and LED routines (`set_led` is already located at `0x09AF8`, §65).
+matrix-scan and LED routines (`set_led` is already located: thunk `0x09AF8`, body `0x02D5C`, §65/§74).
 
 ## 72. Hardware facts recovered from the firmware (no teardown) [T2]
 
@@ -2293,19 +2335,21 @@ must be written before touching protected system registers. Independent of the
 ### LEDs are SPI-driven, and PWM is ruled out
 
 `0x40005000` (PWMX) has **zero** references, so the PWM-driven WS2812 option is
-out. The SPI path configures a clock divider of `0x9F` (159) and guards transfer
-lengths against `0xFD` (253):
+out. The SPI0 block (`0x40004000`) is driven directly:
 
 ```
-0x01FA0  lui a5, 0x40004 ; sb 0x9F, 6(a5)     clock divider 159
-0x130DE  lui a5, 0x40004 ; sb s3, 3(a5)       length, bounded by a check against 0xFD
+0x01FA0  lui a5, 0x40004 ; sb 0x9F, 6(a5)     +6 = R8_SPI0_INT_FLAG: clear IRQ flags
+0x130CE  (s3-2) <= 0xFD ?                     i.e. s3 in 2..255
+0x130DE  lui a5, 0x40004 ; sb s3, 3(a5)       +3 = R8_SPI0_CLOCK_DIV = s3 (runtime)
 ```
 
-**Assessment, held loosely:** a ~159 divider and sub-256-byte transfers fit a
-*register-based* driver (e.g. AW20216S) better than a WS2812 bitstream, which for
-119 LEDs would need ~1 KB of expanded bits at a much faster clock.
-**NOT SETTLED** — distinguishing them properly needs either the CH58x SPI
-register semantics confirmed against WCH's datasheet, or a look at the board.
+**CORRECTED 2026-09-29 [T2]:** this was read as "clock divider `0x9F` (159)" and
+"transfer length bounded by `0xFD` (253)". Backwards: `0x9F` goes to the
+interrupt-flag register (write-1-to-clear), and the value range-checked against
+`0xFD` is the **clock divider** itself (WCH's own `SPI0_CLKCfg` requires >= 2).
+Register offsets are from the CH58x register map, not re-checked against the
+header. So neither a clock rate nor a transfer-size bound follows from these
+lines. The driver identification rests on §74's 216-channel geometry instead.
 
 ### What genuinely still needs hardware
 
@@ -2391,8 +2435,14 @@ firmware's own scan order. Whether row index 0 in the keymap corresponds to
 ### Also spotted
 
 `0x0F10E` reads **`PA_PIN` bit 5** as a single bit and stores it to a global.
-A lone GPIO input sampled like that is characteristic of a hardware switch —
-plausibly the Mac/Win slider (§20). **[HYPOTHESIS, untested.]**
+~~Plausibly the Mac/Win slider (§20).~~ **CORRECTED 2026-09-29 [T2]: PA5 and PA6
+are the knob's rotary-encoder A/B lines.** `0x025AA` reads PA5 or PA6 by index;
+`0x0263C` combines them as `(old<<2 | new) & 0xF` and indexes a table at
+`0x3FC84` = `00 FF 01 00 01 00 00 FF FF 00 00 01 00 01 FF 00` — QMK's
+`encoder_LUT`, byte for byte. The `0x0F10E` read is sleep-entry code arming PA5/PA6
+edge wake (`0x0EF76`), i.e. turning the knob wakes the board. Where the Mac/Win
+switch is read remains **unlocated** (frequent `PA4` reads are an unexamined
+candidate).
 
 ## 74. LED DRIVER identified — 2x AW20216S-class over SPI [T2]
 
@@ -2434,13 +2484,14 @@ port, which already supports AW20216S over SPI (§71).
 ### Consistency with the earlier evidence
 
 - PWM (`0x40005000`) has **zero** references, so WS2812-by-PWM was already out.
-- SPI clock divider `0x9F` (159) gives roughly 380-500 kHz — far too slow for a
-  WS2812 bitstream (~2.4 MHz), but entirely normal for register writes to a
-  driver IC.
-- SPI transfers are length-bounded against `0xFD` (253), consistent with pushing
-  a 216-byte channel block plus a header, not a ~1 KB expanded bitstream.
+- ~~SPI clock divider `0x9F` gives ~380-500 kHz; transfers length-bounded against
+  `0xFD`.~~ **CORRECTED 2026-09-29 [T2]:** misread — `0x9F` is an interrupt-flag
+  clear and the `0xFD` check bounds the (runtime) clock divider (§72). Neither
+  says anything about clock rate or transfer size, so drop both as evidence.
+- The driver code at `0x130F8` drives a GPIO low after SPI setup, per chip — a
+  chip-select, consistent with two SPI devices.
 
-Every line of evidence agrees. **[T2]** — the part *number* is an inference from
+The remaining evidence agrees. **[T2]** — the part *number* is an inference from
 the 216-channel geometry and SPI interface rather than from a marking, so
 "AW20216S-class" is the honest phrasing until someone reads the chip.
 
@@ -2522,25 +2573,31 @@ XOR'd with a single key byte.
 ```
 
 A 208-entry jump table. 167 entries point at the default/bail handler
-(`0x14460`); **41 opcodes have real handlers**, plus `0xEE` handled before the
-table = **42 commands total**.
+(`0x14460`); 41 opcodes have non-default entries, plus `0xEE` handled before the
+table = **42 commands accepted**. **CORRECTED 2026-09-29 [T2]:** three of those 41
+(`0xE3`/`0xE5`/`0xE6`) land on a no-op ack (below), so **38 functional handlers**
++ `0xEE`.
 
 ### Coverage result
 
 NuPhy's app enum (`opcodes.json`, 39 commands) is **complete for what it lists** —
-all 39 have handlers (`0xEE` via the pre-table path). But the firmware handles
+all 39 are accepted (`0xEE` via the pre-table path), though three are no-op acks. But the firmware handles
 **three commands the app never sends and the enum never named:**
 
 | opcode | handler | family | what the code does |
 |--------|---------|--------|--------------------|
 | **`0xD8`** | `0x14824` | lighting | **SetKeyLightColor.** Loops over 4-byte payload records `(index, c, c, c)`, bound to 119, writing a 3-byte RGB entry per LED into the custom-colour table at `gp+0x350`. This is the per-key colour SET that §54 hypothesised did not exist. |
 | **`0xC4`** | `0x148EA` | macro | Calls a macro-storage routine over a 2 KB region (`0x062E4`). Sits with `0xC1`-`0xC3` (key upload / macro). Purpose not pinned beyond "macro-family write". |
-| **`0xF4`** | `0x146DC` | sleep / state | Takes one payload byte, calls `0x0F488`, which **samples `PA_PIN` bit 5** (the lone GPIO flagged in §73 as the likely Mac/Win switch) and drives the row lines. A state-refresh / switch-read trigger. |
+| **`0xF4`** | `0x146DC` | sleep | **CORRECTED 2026-09-29 [T2]:** takes one payload byte and calls **`0x0F088`** (not `0x0F488`, as first read): `sb a0, 0x5EE(gp)` + set a dirty flag. That is the **auto-sleep on/off byte** — the same setter `0xF5` uses for byte 0, read back by `0xF3`. A **RAM-only** auto-sleep toggle (not persisted). It does not read PA5 (§73) or touch the rows. |
 
 ### Also learned from the table
 
 - `0xE3 SetDebounceTime`, `0xE5 SetTouchBarConfig`, `0xE6 GetTouchBarConfig` share
-  one handler entry (`0x14698`) — a small dispatch group.
+  one handler entry (`0x14698`). **CORRECTED 2026-09-29 [T2]:** not a dispatch
+  group — `0x14698` is `lbu a7,0(s7); j 0x1446A`, the common reply tail. It touches
+  no state; it differs from the default (`0x14460`) only in not setting status
+  `0xFF`. **These three are no-op acks in 1.0.6.6**: debounce/touch-bar writes
+  are acknowledged and ignored.
 - `0xEF SetIapMode` (`0x14720`) and `0xF1 RestoreFactory` (`0x14714`) are ordinary
   table entries — nothing special guards them, which is exactly why the early
   opcode sweep hit the bootloader (§47).
@@ -2678,24 +2735,31 @@ sweeping past effect 20 is what resolved it.
 
 Static decode, from the firmware image.
 
-### Why Tap Dance "hold" fires discretely — confirmed in code (§13)
+### Tap Dance "hold" — the firmware DOES have a real hold path (§13)
 
-The tap-dance state machine is at `0x06A00`+; the action dispatch is `0x06CAC`:
+The tap-dance state machine is at `0x06A00`+. The tap and double-tap actions
+(`0x06A70`, `0x06CAC`, `0x06D32`) are press+release pairs:
 
 ```
 sb 1, 8(report) ; jal register(keycode)     ; press
 sb 0, 8(report) ; jal unregister(keycode)   ; release   <- immediately after
 ```
 
-**Register then unregister as an unconditional pair.** Every tap-dance action —
-tap, double, AND hold — emits a discrete press+release. No code path registers a
-keycode and leaves it held for the physical key duration. This is the
-instruction-level confirmation of the §13 behaviour (long-press does not hold).
+~~Register then unregister as an unconditional pair; no code path leaves a keycode
+held.~~ **CORRECTED 2026-09-29 [T2]:** the **hold** action is different. At
+`0x06B2A`-`0x06B96`, once elapsed time exceeds the timing field, it sets a bit in
+a held-mask (`gp+0x70`) and calls `register_code` (`0x033AA`) on the hold keycode
+— or `layer_on` (`0x03D16`) / a press-only record — with **no** immediate
+unregister. The release comes on **physical key-up**: `0x06F0E` (`pressed == 0`)
+-> `0x06DB2`, which tests and clears the held bit and unregisters the hold keycode
+(`0x06E9A`). So the code does not explain §13's "long-press does not hold"; that
+cause is **unlocated**.
 
 Record: 8 bytes, three 16-bit **big-endian** keycodes (tap @0, double @2, hold @4)
-and a timing field @6. **The timing field is clamped to `0x64` = 100** (`0x06AD0`,
-`0x06C80`), so any hold-window value above 100 is silently capped. `more tap hold`
-(`0x06B1E`) is a debug print for an unexpected state value, not core logic.
+and a timing field @6. ~~Clamped/capped at 100.~~ **CORRECTED 2026-09-29 [T2]:**
+`0x06AD0` is a **floor**: `if (t < 100) t = 100` — larger values are kept
+(`0x06C80` is a keycode-range check, not a clamp). `more tap hold` (`0x06B1E`) is
+printed immediately before the hold path runs, not for an unexpected state.
 
 ### `0xC4` (hidden) — macro-storage maintenance
 
@@ -2704,23 +2768,24 @@ block operations over **2 KB regions** (`0x800`). Sits with `0xC1 SetKeyUpload` 
 `0xC2 GetMacro` / `0xC3 SetMacro`. Consistent with a macro compact / save-to-flash
 op. **Family and shape are clear; the exact semantics are not pinned.**
 
-### `0xF4` (hidden) — re-read Mac/Win switch + re-init
+### `0xF4` (hidden) — RAM-only auto-sleep toggle
 
-Handler `0x146DC` -> `0x0F488`:
+**CORRECTED 2026-09-29 [T2]** (was "re-read Mac/Win switch + re-init"). Handler
+`0x146DC` is `lbu a0, 8(s0) ; jal 0x0F088` — the target is **`0x0F088`**, not
+`0x0F488` as first read:
 
 ```
-lw  a5, 0xA4(0x40001)     read PA_PIN
-srli a5, 5 ; andi a5, 1   extract bit 5
-sb  a5, gp-0x452          store switch state
-sb  <payload>, gp-0x453   store the command's one byte argument
-... PB_CLR |= 0x770       drive all matrix rows
-... re-init LED/mode state
+0x0F088  sb a0, 0x5EE(gp)     auto-sleep on/off byte
+         sb 1, -0x3F1(gp)     dirty flag
+         ret
 ```
 
-**This identifies the Mac/Win switch as GPIO `PA5`** — confirming the lone-input
-hypothesis from §73. `0xF4` re-samples the switch and re-initialises keyboard
-state, taking a one-byte parameter stored next to the switch state. It is the
-command form of the switch-poll routine also seen at `0x0F10E`.
+The same setter `0xF5` uses for sleep byte 0 (`0x14B34`); `0xF3` reads it back
+(`0x0F082`). So `0xF4` sets auto-sleep on/off **in RAM, without persisting**. The
+app's report/event enum names `SleepCfgChange=0xF4` (§50) — the same number, though
+there it is an event type, so the match is suggestive only. It reads no
+GPIO; ~~Mac/Win switch = PA5~~ is withdrawn — PA5/PA6 are the knob encoder (§73).
+The PA5-sampling routine at `0x0F488` exists but is sleep-entry code, not `0xF4`.
 
 ### Sleep config is 6 bytes, not 4
 
@@ -2730,7 +2795,7 @@ persists **6 bytes** to flash (via a save call, target ~`0x25`). But
 
 | byte | meaning | notes |
 |------|---------|-------|
-| 0 | auto-sleep on/off | consumed |
+| 0 | auto-sleep on/off | consumed; live copy at `gp+0x5EE` (setter `0x0F088`, also used by `0xF4`) |
 | 1 | Level-1 minutes | consumed |
 | 2 | Level-2 minutes | consumed (read at `0x134B2`) |
 | 3 | factory `0x04` | **no direct consumer found** — vestigial or accessed indirectly |

@@ -6,9 +6,19 @@ tier behind each claim; section numbers are cited inline.
 from __future__ import annotations
 
 import os
+import sys
 import time
 
-import hid
+if sys.platform.startswith("linux"):
+    # hidapi's default libusb build reports usage_page 0 for every interface on
+    # Linux, so the raw interface cannot be found. The hidraw build reads the
+    # kernel's parsed report descriptors and gets it right.
+    try:
+        import hidraw as hid
+    except ImportError:
+        import hid
+else:
+    import hid
 
 VID = 0x19F5
 PID_APP = 0x102D          # application firmware

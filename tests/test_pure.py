@@ -11,7 +11,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from nuphykit import bootloader, data, keymap, lighting  # noqa: E402
+from nuphykit import bootloader, data, keymap, lighting, spaces  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FW = os.path.join(ROOT, "firmware", "Air100v3_US_v1.0.6.6_20260723.bin")
@@ -65,6 +65,29 @@ for bad in ("F14", "F15", "MEDIA_PREV", "VOL_UP", "VOL_DOWN", "r5c9"):
     check(f"{bad} absent from legends", bad in legends, False)
 for good in ("F1", "F12", "CAPS", "FN", "KNOB_CW", "KNOB_CCW"):
     check(f"{good} present", good in legends, True)
+
+print("\nconfig byte writes are whole aligned words (PROTOCOL 44)")
+
+
+class FakeDev:
+    def __init__(self, mem):
+        self.mem, self.sent = bytearray(mem), []
+
+    def request(self, cmd, p, want=0, **kw):
+        a = p[1] | p[2] << 8
+        return bytes(self.mem[a:a + p[0]])
+
+    def send(self, cmd, p, **kw):
+        self.sent.append(p)
+
+
+for idx, want in ((0x6C, [2, 0x6C, 0, 0, 0x2A, 0x39]), (0x6D, [2, 0x6C, 0, 0, 0x00, 0x2A])):
+    fd = FakeDev(bytes(0x6C) + bytes([0x00, 0x39]))
+    spaces.set_byte(fd, "config", idx, 0x2A)
+    check(f"config set_byte 0x{idx:02X}", fd.sent, [want])
+fd = FakeDev(bytes(4))
+spaces.set_byte(fd, "func", 1, 1)
+check("func set_byte stays 1 byte", fd.sent, [[1, 1, 0, 0, 1]])
 
 print("\nlighting byte map")
 st = bytes([0x06, 0x32, 0x02, 0x00, 0x01, 0x00, 0x00, 0x05, 0x80,

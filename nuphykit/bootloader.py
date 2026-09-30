@@ -24,9 +24,7 @@ from __future__ import annotations
 
 import time
 
-import hid
-
-from .device import Device, NuPhyError, VID, PID_UPGRADER
+from .device import Device, hid, NuPhyError, VID, PID_UPGRADER
 
 CMD_BEGIN = 0x81      # frame: 81 07 00 00 00 00 ...   (0x07 is a constant, not a length)
 CMD_WRITE = 0x80      # frame: 80 <len> <addr:32 LE> <data>
