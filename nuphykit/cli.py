@@ -142,10 +142,16 @@ def cmd_keycolor(dev, a):
         lighting.clear_keys(dev)
     colors = {}
     for key in a.keys:
-        led = kl.get(key.upper())
-        if led is None:
-            led = int(key, 0)   # allow raw LED index
-        colors[int(led)] = (r, g, b)
+        if key.upper() in kl:
+            led = kl[key.upper()]
+            if led is None:
+                raise ValueError(f"{key} has no LED")
+        else:
+            led = int(key, 0)   # a raw LED index
+        if not 0 <= led < data.KEY_LEDS:
+            raise ValueError(f"LED {led}: per-key colour reaches 0-{data.KEY_LEDS - 1} "
+                             "only; 99-118 are the side light, driven by its own effect")
+        colors[led] = (r, g, b)
     lighting.enable_custom(dev)
     lighting.set_key_colors(dev, colors)
     print(f"lit {len(colors)} key(s) #{r:02X}{g:02X}{b:02X} via effect "

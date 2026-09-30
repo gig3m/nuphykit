@@ -45,14 +45,17 @@ def by_slot() -> dict[int, dict]:
     return {k["addr"] // 2: k for k in matrix()}
 
 
+KEY_LEDS = 99    # keycap LEDs 0-98; 99-118 are the side light (§78)
+
+
 @lru_cache(maxsize=1)
 def key_led() -> dict:
-    """Physical legend -> LED index (row-major, 18/row). Verified rows 0-3."""
-    try:
-        return json.load(open(_data("key_led.json")))["map"]
-    except FileNotFoundError:
-        return {k["legend"]: k["row"] * 18 + k["col"]
-                for k in matrix()}
+    """Physical legend -> LED index, or None for keys without an LED (the knob).
+
+    From the firmware's g_led_config.matrix_co at 0x43FD4 (§78) - NOT
+    row*18+col, which is wrong from row 3 onwards.
+    """
+    return json.load(open(_data("key_led.json")))["map"]
 
 
 @lru_cache(maxsize=1)

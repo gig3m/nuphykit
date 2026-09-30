@@ -171,6 +171,15 @@ d.raws = {"fw": OneShot([frame(0xFE, 1, 0, text=b"loss a key 0, 21\n"),
 d.read_raw("fw")
 check("radio fault flagged", (kinds, d.stats), (["RADIO", "fw"], {"fw": {"dropped_report": 1}}))
 
+print("\nkey -> LED map is the firmware table, not row*18+col (PROTOCOL 78)")
+kl = data.key_led()
+for leg, want in (("ESC", 0), ("W", 38), ("ENT", 66), ("Z", 71), ("LCMD", 89),
+                  ("RCTL", 93), ("LEFT", 94), ("RGHT", 96), ("KP_0", 97), ("KP_DOT", 98),
+                  ("KNOB_CW", None)):
+    check(f"LED of {leg}", kl.get(leg), want)
+check("keycap LEDs are exactly 0..98",
+      sorted(v for v in kl.values() if v is not None), list(range(data.KEY_LEDS)))
+
 print("\nlighting byte map")
 st = bytes([0x06, 0x32, 0x02, 0x00, 0x01, 0x00, 0x00, 0x05, 0x80,
             0x04, 0x3C, 0x02, 0x01, 0x00, 0xFF, 0x00, 0x00])

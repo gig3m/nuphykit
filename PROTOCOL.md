@@ -2781,14 +2781,26 @@ fully functional. Confirmed by eye: WASD lit red on a black board.
 - **Record byte order is `(index, R, G, B)`** — confirmed: writing `(idx,255,0,0)`
   reads back `FF 00 00` on `0xD2` and shows red.
 - **LED index is row-major, 18 per row** — LEDs 0-17 = the top row (ESC + F1-F12
-  + DEL/HOME/END/PGUP/PGDN), verified by lighting them. So
-  `LED = matrix_row * 18 + matrix_col`. WASD = 38 / 55 / 56 / 57, verified by eye
+  + DEL/HOME/END/PGUP/PGDN), verified by lighting them. ~~So
+  `LED = matrix_row * 18 + matrix_col`.~~ WASD = 38 / 55 / 56 / 57, verified by eye
   and by `0xD2` (exactly those four red, all else off).
+  **CORRECTED 2026-09-30 [T2 + T1]:** the index is the firmware's QMK
+  `g_led_config.matrix_co[6][18]` at file `0x43FD4` (`0xFF` = no LED): LEDs 0-98
+  are the 99 keycaps in physical row order (18/18/18/16/17/12 per row), so the
+  formula only holds for rows 0-2 and row 3 cols 0-11. Lighting 66/71/89/93/94/
+  96/97 lit Enter, Z, (LCmd), RCtl, ←, →, numpad 0 as the table predicts, not
+  the formula. `key_led.json` now carries the table; the knob has no LED.
 - The buffer is RAM (`gp+0x350`); a reboot clears it and the five config spaces
   are untouched.
 
-Verified rows 0-3 physically. Rows 4-5 and the side/underglow LEDs (indices
-~101-118) follow the same formula by inference but were not individually pressed.
+~~Verified rows 0-3 physically. Rows 4-5 and the side/underglow LEDs (indices
+~101-118) follow the same formula by inference but were not individually pressed.~~
+**CORRECTED 2026-09-30:** the side light is LEDs **99-108 (left) and 109-118
+(right)**, flag 4 in `g_led_config.flags` (`0x4412E`). The per-key table cannot
+reach them: the custom renderer (`0x0B0B8`) stops at 99, and the side light's
+own engine (`0x0D5xx`-`0x0E6xx`) drives them directly — T1: 106-118 set red
+showed nothing, even with side brightness 100, while the side light kept its
+own colour cycle. All 119 LEDs have channels; none are unpopulated.
 
 ### Packaged
 
