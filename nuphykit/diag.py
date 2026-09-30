@@ -33,6 +33,20 @@ MODIFIERS = {29, 42, 54, 56, 97, 100, 125, 126, 58}   # ctrl shift alt meta caps
 CHATTER_MS = 40                     # re-press this soon after release = chatter
 RESCAN_S = 1.0
 
+# Firmware log lines that mark a radio fault (PROTOCOL §84 ranked causes).
+RADIO_FAULTS = {
+    "loss a key": "dropped_report",     # a report - maybe a key-up - given up on
+    "over 50 times": "retry_exhausted",
+    "disconnect": "rf_disconnect",
+    "prepare hop": "hop",
+    "do hop": "hop",
+    "jump to channel": "hop",           # dongle side
+    "over send remove": "dongle_flush",
+    "queue is full": "queue_flush",
+    "Full, clear the queue": "queue_flush",
+    "kbd shuld sleep": "host_suspend_sleep",
+}
+
 
 def repeat_delay_ms() -> int:
     """The compositor's autorepeat delay - a key-up later than this repeats."""
@@ -191,7 +205,13 @@ class Diag:
                 if not r:
                     return
                 line = log.decode(bytes(r), self.pending[src])
-                if line is not None:
+                if line is None:
+                    continue
+                fault = next((v for k, v in RADIO_FAULTS.items() if k in line), None)
+                if fault:
+                    self.emit("RADIO", f"[{src}] {line}")
+                    self.count(src, fault)
+                else:
                     self.emit(src, line)
         except OSError:
             del self.raws[src]

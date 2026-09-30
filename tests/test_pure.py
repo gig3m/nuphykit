@@ -151,6 +151,24 @@ check("held shift is not flagged",
 check("chatter flagged",
       run_keys([(0, K_E, 1), (0.05, K_E, 0), (0.07, K_E, 1), (0.12, K_E, 0)])[0], ["CHATTER"])
 
+d = diag.Diag.__new__(diag.Diag)
+d.stats, d.pending, kinds = {}, {"fw": []}, []
+d.emit = lambda kind, msg, t=None: kinds.append(kind)
+
+
+class OneShot:
+    def __init__(self, frames):
+        self.frames = list(frames)
+
+    def read(self, n):
+        return self.frames.pop(0) if self.frames else []
+
+
+d.raws = {"fw": OneShot([frame(0xFE, 1, 0, text=b"loss a key 0, 21\n"),
+                         frame(0xFE, 1, 0, text=b"====chan 2, rate 0, rssi -60, ack 1 ===\n")])}
+d.read_raw("fw")
+check("radio fault flagged", (kinds, d.stats), (["RADIO", "fw"], {"fw": {"dropped_report": 1}}))
+
 print("\nlighting byte map")
 st = bytes([0x06, 0x32, 0x02, 0x00, 0x01, 0x00, 0x00, 0x05, 0x80,
             0x04, 0x3C, 0x02, 0x01, 0x00, 0xFF, 0x00, 0x00])
