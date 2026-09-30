@@ -26,6 +26,10 @@ def decode(r: bytes, pending: list[str]) -> str | None:
     A log frame is `fe <parts> <index> <text...>`; long messages span several
     frames sharing `parts`, sent in index order, padded with spaces.
     """
+    if r[0] == 0xAA:
+        # A reply to some other client's command - every reader of the raw
+        # interface sees every report. Not ours to print.
+        return None
     if r[0] == LOG_UPLOAD:
         parts, index = r[1], r[2]
         pending.append(bytes(r[3:]).split(b"\0")[0].decode("latin1"))

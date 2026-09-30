@@ -141,7 +141,10 @@ whether the firmware *implements* a keycode needs T1.
    space. **Cleared by a factory reset**, but its storage is **NOT** the
    keyboard-function space — all four reconstructions of the pre-reset `0xE1`
    bytes failed to reproduce it (§59), and `GetBase` was unchanged across the
-   reset. Location still unknown. Never use Ctrl or Caps as a test probe.
+   reset. ~~Location still unknown.~~ **Located 2026-09-29 [T2]:** QMK
+   `keymap_config` bit 0 at eeprom word `0x004` (DF `0x5004`), set by the
+   `0x7000` magic keycode — almost certainly pressed in the §57 test. `0x7001`
+   clears it. Never use Ctrl or Caps as a test probe.
 11. **`navigate` to the same URL including its `#hash` does NOT reload the page** —
    same-document navigation, the JS context survives. Use `location.reload()`.
    A wrong conclusion was drawn from this in session 9.
@@ -189,16 +192,17 @@ notes       0xD2 GetKeyLightColor is a READ of live LED state (357B = 119x3);
 
 ```
 config memory 0x0000-0x1BFF  0xB2/0xB3   keymap, macros, SOCD/TapDance/TGL
-keyboard func 4 bytes        0xE1/0xE2   wobbliness, disable Win/AltF4/AltTab
+keyboard func 4 bytes x2     0xE1/0xE2   debounce x10ms, disable Win/AltF4/AltTab   [PER MODE]
 sleep cfg     4 bytes        0xF3/0xF5   auto-sleep, level-1/2 minutes   [whole record]
 appdefine     0x03BA bytes   0xFB/0xFC   app scratch; 0xA8 = knob/button
-lighting      17 bytes       0xD5/0xD6   effect, brightness, speed, RGB   [ACTIVE MODE ONLY]
+lighting      17 bytes x2    0xD5/0xD6   effect, brightness, speed, RGB   [PER MODE]
 ```
 
-**Lighting is stored per Mac/Win mode** (found 2026-09-29, T1): flipping the
-switch makes the board push a `0xD7` report carrying a *different* 17-byte
-record, and `0xD5` reads whichever mode is active. A backup taken in one switch
-position therefore misses the other mode's lighting — back up in both.
+**`func` and lighting are stored per Mac/Win mode**, selected by payload byte 3
+(0 = Mac, 1 = Win; PROTOCOL §84). `nuphykit backup` saves both modes as
+`light@mac`/`light@win`/`func@mac`/`func@win` whichever way the switch is set.
+Old snapshots' bare `light`/`func` are Mac. Not reachable by any command: the
+Ctrl/Caps swap flag and the radio link slots (BLE bonds, 2.4G pairing).
 
 **`tools/nuphykit.py` covers all five at once** — `show` / `backup` / `verify` /
 `restore`. Use it, not `restore.py`, for anything calling itself a backup.
@@ -257,8 +261,9 @@ Physical or judgement calls I cannot do alone:
    selects the base bank live (Mac→0, Win→4), writes nothing to config memory.
    See PROTOCOL §20.
 2. ~~Do `0x5600` / `0x7000` actually work?~~ — **DONE, resolved T1 2026-08-08.**
-   Both inert. `0x5600`, `0x56F1` (swap-hands toggle) and `0x7000` all do nothing.
-   PROTOCOL §57.
+   Swap-hands (`0x5600`/`0x56F1`) inert. **CORRECTED 2026-09-29:** `0x7000` is
+   NOT inert — it persistently sets QMK's Ctrl<->Caps swap, the probable cause
+   of HAZARD 9. PROTOCOL §57/§84.
 3. ~~Do DKS / RS / HT do anything?~~ — **DONE 2026-08-08.** Not constructible:
    this model's keycode table has zero `0x90`-`0x95` entries; those tags belong
    to the hall-effect line. Nothing to bind. PROTOCOL §57.

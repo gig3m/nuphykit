@@ -19,8 +19,8 @@ protocol — enough to build custom firmware.
   ships a toggle keycode. Layer chaining works 3 deep.
 - **Backup/restore of everything.** The board keeps settings in **five separate
   places**; tools that read only the keymap silently lose the other four.
-  (Lighting is additionally kept per Mac/Win mode, and only the active mode is
-  readable — back up in both switch positions.)
+  `light` and `func` are kept **per Mac/Win mode**; `backup` saves both,
+  whichever way the switch is set.
 - **Writes to both Mac and Windows banks**, so a remap survives the physical
   Mac/Win switch (which selects the base bank *live*).
 
@@ -65,10 +65,12 @@ python -m nuphykit log                      # live firmware debug log: radio, pa
 | space | get/set | size | granularity |
 |-------|---------|------|-------------|
 | `config` | `0xB2`/`0xB3` | `0x1C00` | whole 16-bit words (a 1-byte write writes 2) |
-| `func` | `0xE1`/`0xE2` | 4 | single byte |
+| `func` | `0xE1`/`0xE2` | 4 **per Mac/Win mode** | single byte (never past byte 3) |
 | `sleep` | `0xF3`/`0xF5` | 4 (6 internally) | **whole record only** |
-| `appdefine` | `0xFB`/`0xFC` | `0x03BA` | single byte |
-| `light` | `0xD5`/`0xD6` | 17 **per Mac/Win mode** | single byte; active mode only |
+| `appdefine` | `0xFB`/`0xFC` | `0x03BA` | single byte; last `0x14` alias Mac `light`/`func` |
+| `light` | `0xD5`/`0xD6` | 17 **per Mac/Win mode** | single byte |
+
+Payload byte 3 picks the mode for `func`/`light` (PROTOCOL §84).
 
 A factory reset clears all five. A **firmware flash preserves all five.**
 
@@ -111,10 +113,12 @@ no CH58x support). See `PROTOCOL.md` §70–§71.
 
 ## Known gaps — read these
 
-- **The Ctrl↔Caps swap** seen once is real but unexplained and unreadable; parked
-  as a probable accident. No tool here detects or backs it up.
+- **The Ctrl↔Caps swap** is QMK's `keymap_config` flag, almost certainly set by
+  pressing `0x7000` during testing (PROTOCOL §57/§84). No command reads it; bind
+  `0x7001` and press it once to clear it.
 - **Readback proves storage, never behaviour.** The keymap stores any 16-bit
-  value without validating it; `0x5600`/`0x56F1`/`0x7000` store and do nothing.
+  value without validating it; `0x5600`/`0x56F1` store and do nothing. (`0x7000`
+  looked inert too — it wasn't; see above.)
 - **CH582 vs CH583 is unconfirmed** — the `0x82` in `GetBase` is a hardcoded
   constant, not a chip-ID read. Needs eyes on the PCB (§80).
 - **Nothing has been compiled from source**; modifying firmware *code* (vs the

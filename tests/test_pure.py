@@ -89,6 +89,25 @@ fd = FakeDev(bytes(4))
 spaces.set_byte(fd, "func", 1, 1)
 check("func set_byte stays 1 byte", fd.sent, [[1, 1, 0, 0, 1]])
 
+fd = FakeDev(bytes(4))
+spaces.set_byte(fd, "func", 1, 1, mode=spaces.WIN)
+check("func set_byte win uses pad 1", fd.sent, [[1, 1, 0, 1, 1]])
+for name, idx in (("func", 4), ("appdefine", 0x3A6), ("appdefine", 0x3B9)):
+    try:
+        spaces.set_byte(FakeDev(bytes(0x400)), name, idx, 0)
+        check(f"{name}[0x{idx:X}] refused", "written", "ValueError")
+    except ValueError:
+        check(f"{name}[0x{idx:X}] refused", "ValueError", "ValueError")
+check("legacy snapshot keys", sorted(spaces._legacy({"light": "00", "func": "01", "sleep": "02"})),
+      ["func@mac", "light@mac", "sleep"])
+check("snapshot keys", [k for k, _, _ in spaces.keys()],
+      ["config", "func@mac", "func@win", "sleep", "appdefine", "light@mac", "light@win"])
+check("appdefine tail not owned", len(spaces._owned("appdefine", bytes(0x3BA))), 0x3A6)
+fd = FakeDev(bytes(0x400))
+spaces.write(fd, "appdefine", bytes(0x3BA))
+check("appdefine write stops at alias",
+      max(p[1] | p[2] << 8 for p in fd.sent) + fd.sent[-1][0], 0x3A6)
+
 print("\nunsolicited report decoding (PROTOCOL 82)")
 
 
@@ -104,6 +123,7 @@ part1 = b"=" * 11 + b"keyboard want to pair, channel 34, addr 1207380725"
 check("log part 1 waits", log.decode(bytes([0xFE, 2, 0]) + part1, pend), None)
 check("log part 2 joins", log.decode(frame(0xFE, 2, 1, text=b" ======\n"), pend),
       part1.decode() + " ======")
+check("replies to other clients ignored", log.decode(frame(0xAA, 0xB2, 0), pend), None)
 check("mode report", log.decode(frame(0xA2, 4, 1), pend), "[mode] layer 4  a2 04 01 20")
 
 print("\nwireless diag flagging")

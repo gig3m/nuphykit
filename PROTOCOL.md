@@ -1284,12 +1284,21 @@ behaviour. Now tested on hardware.
 |-------------|----------------|-------------------|
 | `0x5600` | `QK_SWAP_HANDS` base | nothing |
 | `0x56F1` | swap-hands **toggle** | nothing; `asdf` typed normally after |
-| `0x7000` | `MAGIC_SWAP_CONTROL_CAPS_LOCK` | nothing; Caps and LCtrl unchanged |
+| `0x7000` | `MAGIC_SWAP_CONTROL_CAPS_LOCK` | ~~nothing; Caps and LCtrl unchanged~~ **CORRECTED 2026-09-29 — see below** |
 
 Swap-hands was tested with the toggle variant specifically, because the base
 code alone would be a no-op even on firmware that supports it. Typing `asdf`
 before and after produced identical output, so the hand-swap matrix is absent.
-**Both blocks are inert. A configurator must not offer them.**
+~~**Both blocks are inert. A configurator must not offer them.**~~
+
+**CORRECTED 2026-09-29 [T2, not re-tested live]:** only swap-hands is inert.
+`0x7000` is live QMK magic: `process_magic` (`0x08B8C`) sets bit 0 of
+`keymap_config` and **persists it immediately** to eeprom word `0x004`
+(data flash `0x5004`). The press "did nothing" visibly because the swap only
+shows on the *next* Ctrl or Caps press — and this is almost certainly the
+origin of the §58 Ctrl<->Caps swap found right afterwards. `0x7001` unswaps,
+`0x7002` toggles; `0x7003`/`0x7004` and `0x7020`-`0x7022` drive the caps->ctrl
+and Esc<->Caps bits of the same word. See §84.
 
 Scope limit: `0x7000` was exercised only for the control/caps-lock swap
 semantic. Other `0x70xx` magic codes were not tried, and this says nothing about
@@ -1625,7 +1634,12 @@ LightStateChange` with a different record (on this board: Mac
 `06 32 04 00 01 00 00 05 80 01 01 02 00 00 ff 6d 1e`, Win
 `06 32 02 00 01 00 00 05 80 04 3c 02 01 00 ff 00 00`), and `0xD5` returns the
 active mode's. A backup made in one switch position does not contain the other
-mode's lighting. Whether `0xD6` can address the inactive mode is **unprobed**.
+mode's lighting. ~~Whether `0xD6` can address the inactive mode is unprobed.~~
+**RESOLVED 2026-09-29:** payload byte 3 selects the mode — `0xD5` with `pad=1`
+reads the Windows record [T2, live]; `0xD6` with a non-active pad writes the
+inactive record in flash [T2 static]. It also means `0xD5`/`0xD6` with `pad=0`
+**address Mac, not "the active mode"**: in Windows mode they reach Mac's stored
+record. See §84.
 
 ### `0xD2` confirms §54 from the app side
 
@@ -2440,9 +2454,10 @@ are the knob's rotary-encoder A/B lines.** `0x025AA` reads PA5 or PA6 by index;
 `0x0263C` combines them as `(old<<2 | new) & 0xF` and indexes a table at
 `0x3FC84` = `00 FF 01 00 01 00 00 FF FF 00 00 01 00 01 FF 00` — QMK's
 `encoder_LUT`, byte for byte. The `0x0F10E` read is sleep-entry code arming PA5/PA6
-edge wake (`0x0EF76`), i.e. turning the knob wakes the board. Where the Mac/Win
-switch is read remains **unlocated** (frequent `PA4` reads are an unexamined
-candidate).
+edge wake (`0x0EF76`), i.e. turning the knob wakes the board. ~~Where the Mac/Win
+switch is read remains unlocated~~ **RESOLVED 2026-09-29 [T2]:** the Mac/Win
+switch is **PB9** and the cable/wireless switch **PB8** (poll `0x0FE90`); PA4 is
+most likely USB VBUS / cable detect. See §84.
 
 ## 74. LED DRIVER identified — 2x AW20216S-class over SPI [T2]
 
@@ -2798,8 +2813,8 @@ persists **6 bytes** to flash (via a save call, target ~`0x25`). But
 | 0 | auto-sleep on/off | consumed; live copy at `gp+0x5EE` (setter `0x0F088`, also used by `0xF4`) |
 | 1 | Level-1 minutes | consumed |
 | 2 | Level-2 minutes | consumed (read at `0x134B2`) |
-| 3 | factory `0x04` | **no direct consumer found** — vestigial or accessed indirectly |
-| 4-5 | stored, persisted | **not returned by GetSleepInfo; purpose unknown** |
+| 3 | factory `0x04` | ~~no direct consumer found~~ **CORRECTED 2026-09-29 [T2]:** early-sleep delay, seconds — read at `0x0F37C` (`byte3 x 100` 10 ms ticks); enters L1 early only when three activity/LED flags are zero and PA4 is low |
+| 4-5 | stored, persisted | not returned by GetSleepInfo; **byte 4 gates `0xD6`** (must be 1 for SetLightState to act, `0x14874`) and light loading |
 
 So `nuphykit`'s `sleep` space (4 bytes) covers what the app uses, but the firmware
 keeps two more bytes. Low impact — they were factory-default across every backup.
@@ -2987,9 +3002,12 @@ Conclusions:
   holding the BLE bonds and the 2.4G pairing. None of the five spaces (§63)
   contains them, so `backup`/`restore` cannot preserve them. **[T2]**
 - **An empty 2.4G slot makes the keyboard pair on every 2.4G selection**, and the
-  dongle only answers pairing just after it is plugged in. The 2026-08-08 factory
-  reset is the likely eraser (it clears "everything"), and 2.4G stayed dead from
-  then until this re-pair. **[T1 for the fix; T4 for the cause]**
+  dongle only answers pairing just after it is plugged in. ~~The 2026-08-08 factory
+  reset is the likely eraser~~ **CORRECTED 2026-09-29 [T2]:** factory reset does
+  *not* touch the 2.4G record (it erases the BLE bonds). The record is invalidated
+  at the **start of any 2.4G pairing** — holding `KC_FN_LINK_24G` (`0x7E02`) or
+  selecting 2.4G while invalid — so a pairing the dongle never answered left it
+  empty. See §84. **[T1 for the fix]**
 - **Recovery: select 2.4G, then replug the dongle.** No app, no key combo. **[T1]**
 - The periodic `chan / rate / rssi / ack` line and `err rate samples`, plus the
   hop messages (`do hop channel %d -> %d`, `channel %d is too bad, should jump`,
@@ -3059,4 +3077,130 @@ frames. RX counters exist at `gp-0x684/-0x688/-0x68C` but are never exported.
 
 `nuphykit diag` merges the keyboard log (cable), the dongle log, and evdev key
 timing into one timeline for catching an incident.
+
+## 84. Modes, storage map, the radio's failure paths [T2 static; live checks marked]
+
+Static analysis of fw 1.0.6.6 by three passes on 2026-09-29, spot-checked live
+where a read could do it. File offsets; RAM code at file `0x4..0x22FC` runs at
+`0x20000000`. TMOS tick = 625 us.
+
+### Payload byte 3 selects the Mac/Win mode
+
+The parser keeps decoded frame byte 7 — the "pad" byte every tool sent as 0 —
+and `0xD5`/`0xD6`/`0xE1`/`0xE2` compare it with `mode()` (`0x0FE7E`: 0 = Mac,
+1 = Win). Equal: the live RAM copy. Not equal: straight to that mode's record
+in flash. **`GetBase` byte 0 is `mode()`** (`0x14914`).
+
+Live [T2]: `0xA0` byte 0 = `00` in Mac; `0xD5` with pad `1` returns the Windows
+record (`06 32 02 00 01 74 00 05 80 04 3c 02 01 00 ff 00 00`, matching the
+`0xD7` pushed on a flip except byte 5, which the stored path assembles
+differently), stable across 15 reads. `nuphykit` now reads and writes `func`
+and `light` per mode and snapshots both.
+
+### Data flash
+
+| DF | contents |
+|----|----------|
+| `0x0000` | IAP flag — `0xEF` writes `0x55` |
+| `0x0004`-`05` | debug flags; `0xFD` reads byte 5 (`0xBB`); `0xFE` programs **without erase** |
+| `0x0500`-`052F` | **link info block**: `+0` current slot 0-3, `+0x14` 2.4G address (u32; `0x71764129` = default/unpaired), `+0x18` 2.4G channel, `+0x19` BLE bond bitmask, `+0x1A` 2.4G paired, `+0x1B` bit 0 = wipe all bonds at next boot, `+0x1C..` 20 bytes returned by `0x2F` |
+| `0x4F00` | boot marker; `KC_FN_BOOT_ENTRY` `0x7E00` writes `0x0A` [T4] |
+| `0x5000`-`6FFF` | QMK EEPROM emulation (below) |
+| `0x7800`-`7BFF` | BLE bond storage, one page per slot |
+
+QMK eeprom (DF `0x5000` + offset): `0x000`-`0x024` eeconfig incl. **`0x004`
+`keymap_config`** (the Ctrl/Caps swap, §57/§58); `0x025` sleep (6 bytes);
+`0x07F`-`0x438` appdefine; `0x425`/`0x461` Mac/Win light core, `0x443`/`0x47F`
+Mac/Win light aux, `0x457`/`0x493` Mac/Win func; `0x49D` keymap-version magic;
+`0x4A1`-`0xB60` keymap (8 x `0xD8`, big-endian); `0xB61` knob; `0xB81` Mac
+macros; `0x1381` **Win macros**; `0x1B81`/`0x1C01` SOCD, `0x1C81`/`0x1D81`
+TapDance, `0x1E81`/`0x1EC1` TGL, each Mac/Win.
+
+So config memory (`0xB2`/`0xB3`) is a holey view of eeprom `0x4A1`-`0x2000` —
+which is where the §56 knob alias comes from — and the macro/SOCD/TapDance/TGL
+tables are **per mode**. **No command reaches eeprom below `0x7F` or the link
+storage**, so the swap flag and the pairings cannot be backed up.
+
+### Hazards found
+
+- **`0xE2` is unbounded.** Active mode: `memcpy` to RAM `0x20003148 + addr`.
+  Inactive mode: eeprom `0x457`/`0x493 + addr` up to `0x2000` — it can overwrite
+  the keymap and macros. Keep `addr + len <= 4` (`nuphykit` refuses otherwise).
+- **`0xFB`/`0xFC` are bounded at `0x400`, not `0x3BA`.** Appdefine `0x3A6`-`0x3B9`
+  *is* the Mac light core and `0x3D8` the Mac func: live, `0xFB` at `0x3D8`
+  returns `02 00 00 00` = `func@mac` [T2]. `nuphykit` stops appdefine writes at
+  `0x3A6`.
+- **`0xC4`** (hidden) zero-fills **both** macro buffers in flash.
+- **`0xE4 TestDelayTime`** measures nothing: with payload byte 1 non-zero it
+  **types Enter** through the active transport and sends no reply.
+
+### Switches, debounce, battery
+
+- **Mac/Win = PB9** (high = Mac, `kb_state[7] = 0xA2`, base layer 0; low = Win,
+  `0xA1`, bank 4), **cable/wireless = PB8**; poll `0x0FE90`, 25-sample debounce.
+  PA4 is most likely VBUS/cable detect. Wireless slot comes from `0x7E02`-`0x7E05`.
+- **Debounce is QMK `sym_eager_pk`**, lock = `func[0] x 10 ms` (this board: 20 ms),
+  matrix scanned every 1.875 ms; no range check (0 disables). `0xE3` is a no-op.
+  A 29 ms re-press (seen once in `diag`) passes a 20 ms lock — chatter, not RF.
+- **Battery** is measured (PA9/AIN13, ~every 400 s) and reported **only** over
+  BLE Battery Service; nothing over 2.4G or raw HID. <=10 % blinks red and caps
+  brightness; it changes nothing in the radio.
+
+### Link slots: what erases them
+
+Factory reset (`0xF1`, or holding `0x7E13`) erases **all BLE bonds** and resets
+the slot to 2.4G, but **leaves the 2.4G record alone**. The 2.4G record is
+invalidated at the **start of any 2.4G pairing** (`0x1AF78`) — holding
+`KC_FN_LINK_24G` or selecting 2.4G while invalid — so an unanswered pairing
+leaves it empty (§82). Separately, a BLE connect whose peer address reads as
+all-zero sets the wipe-at-boot bit and erases every bond on next boot.
+
+### The 2.4G link, keyboard side (`0x1A080`-`0x1B6D6`)
+
+- **TX queue**: 100 x 40-byte FIFO; a failing head blocks everything behind it;
+  a full queue is flushed whole. HID reports are RF type 0, full-state.
+- **Retries**: every ~4 ms until acked, **at most 50 (~300 ms)**. Then the
+  packet is **dropped** — log `over 50 times ... type 0` and `loss a key`.
+  **A dropped key-up is never repaired**; nothing re-sends key state.
+- **Keep-alive**: type 4, every 600 ms when idle or unanswered. It re-arms the
+  dongle's 1 s release timer (§83), so a key stuck by a dropped key-up **stays
+  down until the next report gets through**. Live [T1]: a 3.5 s hold on 2.4G
+  was delivered as one continuous hold; the dongle passes no keep-alive to USB,
+  so its interval cannot be seen from the host.
+- **Disconnect**: 4 silent windows (~2.4-3 s) → `disconnect, and reconnect`,
+  `rf has disconnect`, probing every 150 ms then channel stepping. **Reports are
+  refused while reconnecting** (except just after sleep), so keys typed then are
+  lost.
+- **Hops**: `channel %d is too bad` is advisory only; a real hop happens when one
+  packet needs >=14 retries (max once per 6 s): `prepare hop` → `do hop`.
+- **Log fields**: `err rate samples` = per-600 ms-window retransmit % (5 windows
+  per line); `rate` = share of those above 32 %; `rssi` = mean dBm of dongle
+  packets in the last window; `ack` = mean ms to ack; `chan` = channel.
+
+### Sleep
+
+L1 (after `sleep[1]` minutes, or `sleep[3]` s early when lighting is off) stops
+scanning and LEDs; **the radio stays up**. L2 (after `sleep[2]` more minutes, or
+2 min disconnected) shuts the radio. Live [T1]: at ~6.3 min idle the keyboard
+**dropped its USB device** even with the cable in, and re-enumerated on the
+next keypress; the wake keystroke arrived intact. After an L2 wake each report
+gets one blind transmission until sync, so first keys can be lost. If the
+dongle reports its USB as suspended for 5 s, the keyboard logs `kbd shuld
+sleep` and deep-sleeps — Linux USB autosuspend of the dongle would do this;
+on this host it is off (`power/control=on`, never suspended).
+
+### What causes "rrrr" — ranked, with the log line that would confirm each
+
+1. **Key-up dropped after 50 retries during a short fade** while still
+   "connected": `loss a key` / `over 50 times ... type 0`, high `err rate
+   samples`; in `diag`, the release arrives with the *next* key. Fits repeats
+   mid-sentence.
+2. **Full disconnect/reconnect**: `rf has disconnect` ... `rf has connected`;
+   the release comes ~1 s after the last report (dongle timer); keys typed
+   during the reconnect are missing.
+3. **Hop churn**: `prepare hop` / `do hop` here, `jump to channel` in the dongle log.
+4. **Dongle USB-side flush**: `over send remove` / `queue is full` (dongle log).
+5. **Post-sleep one-shot window**, **host suspend** — ruled out on this host
+   for the reported mid-typing case.
+6. **Switch chatter** (not RF): release→press 20-30 ms on one key; also on cable.
 

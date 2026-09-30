@@ -9,7 +9,8 @@ Byte map, established by reading before/after each single UI change:
     4   colour mode: 01 = cycling, 00 = fixed custom colour
     10  side-light brightness        (00 = "Side Light off"; also not a flag)
 
-0xD6 requires the WHOLE 17-byte record. Partial writes are ack'd and discarded.
+0xD6 accepts partial writes (§62). One record per Mac/Win mode: `mode` picks
+it through the pad byte, defaulting to the active mode (§84).
 
 There is no per-key colour control: 0xD2 GetKeyLightColor is a READ of the
 rendered LED frame (357 bytes = 119 LEDs x 3) with no Set counterpart (§54), and
@@ -17,6 +18,7 @@ the app polls it to animate its own preview.
 """
 from __future__ import annotations
 
+from . import spaces
 from .device import Device
 
 LIGHT_LEN = 17
@@ -37,24 +39,24 @@ RGB_R, RGB_G, RGB_B = 6, 7, 8
 SIDELIGHT = 10
 
 
-def get(dev: Device) -> bytes:
-    return dev.request(0xD5, [LIGHT_LEN, 0, 0, 0], want=LIGHT_LEN)
+def get(dev: Device, mode: int | None = None) -> bytes:
+    return spaces.read(dev, "light", mode)
 
 
-def set(dev: Device, state: bytes) -> None:
+def set(dev: Device, state: bytes, mode: int | None = None) -> None:
     if len(state) != LIGHT_LEN:
         raise ValueError(f"lighting state must be {LIGHT_LEN} bytes")
-    dev.send(0xD6, [LIGHT_LEN, 0, 0, 0] + list(state), wait=0.3)
+    spaces.write(dev, "light", state, mode)
 
 
-def modify(dev: Device, **fields) -> bytes:
+def modify(dev: Device, mode: int | None = None, **fields) -> bytes:
     """Read-modify-write named fields. Returns the new state.
 
     e.g. modify(dev, effect=6, backlight=50, sidelight=60)
     """
     names = {"effect": EFFECT, "backlight": BACKLIGHT, "speed": SPEED,
              "colour_mode": COLOUR_MODE, "sidelight": SIDELIGHT}
-    rec = bytearray(get(dev))
+    rec = bytearray(get(dev, mode))
     if len(rec) != LIGHT_LEN:
         raise RuntimeError("could not read lighting state")
     for k, v in fields.items():
@@ -66,7 +68,7 @@ def modify(dev: Device, **fields) -> bytes:
             rec[names[k]] = v & 0xFF
         else:
             raise ValueError(f"unknown lighting field {k!r}")
-    set(dev, bytes(rec))
+    set(dev, bytes(rec), mode)
     return bytes(rec)
 
 

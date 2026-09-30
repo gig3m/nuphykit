@@ -33,30 +33,31 @@ def _path(name):
 
 
 def cmd_show(dev, a):
-    for n, s in spaces.SPACES.items():
-        d = spaces.read(dev, n)
+    active = spaces.active_mode(dev)
+    print(f"  active mode: {['Mac', 'Windows'][active]}")
+    for k, n, m in spaces.keys():
+        s = spaces.SPACES[n]
+        d = spaces.read(dev, n, m)
         if n == "config":
             import hashlib
-            print(f"  {n:10} {len(d)} bytes  sha256={hashlib.sha256(d).hexdigest()[:16]}")
+            print(f"  {k:10} {len(d)} bytes  sha256={hashlib.sha256(d).hexdigest()[:16]}")
         elif n == "appdefine":
             acc = d[0xA8] if len(d) > 0xA8 else -1
-            print(f"  {n:10} {len(d)} bytes  accessory={'button' if acc else 'knob'}")
+            print(f"  {k:10} {len(d)} bytes  accessory={'button' if acc else 'knob'}")
         else:
-            print(f"  {n:10} {' '.join(f'{x:02X}' for x in d)}")
-        if a.verbose:
+            print(f"  {k:10} {' '.join(f'{x:02X}' for x in d)}")
+        if n == "light":
+            print(f"             {lighting.describe(d)}")
+        if a.verbose and m != spaces.WIN:
             print(f"             {s.note}")
-    print(f"  lighting   {lighting.describe(spaces.read(dev, 'light'))}")
-    print("\n  NOT captured by any of these: the firmware Ctrl<->Caps swap "
-          "(PROTOCOL 58) is persistent and unreadable.")
-    print("  lighting shown is the ACTIVE Mac/Win mode only; the other mode has "
-          "its own record (PROTOCOL 62).")
+    print("\n  NOT captured by any of these: the Ctrl<->Caps swap flag and the "
+          "radio link slots (BLE bonds, 2.4G pairing) - PROTOCOL 84.")
 
 
 def cmd_backup(dev, a):
     json.dump(spaces.snapshot(dev), open(_path(a.name), "w"), indent=1)
-    print(f"backed up all {len(spaces.SPACES)} spaces -> {_path(a.name)}")
-    print("  lighting covers the ACTIVE Mac/Win mode only - flip the switch and "
-          "back up again under another name to keep the other mode's lighting")
+    print(f"backed up all {len(spaces.SPACES)} spaces (light and func for both "
+          f"Mac and Windows) -> {_path(a.name)}")
 
 
 def cmd_verify(dev, a):
@@ -71,9 +72,8 @@ def cmd_verify(dev, a):
 
 def cmd_restore(dev, a):
     snap = json.load(open(_path(a.name)))
-    for n in spaces.SPACES:
-        spaces.write(dev, n, bytes.fromhex(snap[n]))
-    print("restored; verifying...")
+    done = spaces.restore(dev, snap)
+    print(f"restored {', '.join(done) if done else 'nothing - already identical'}; verifying...")
     return cmd_verify(dev, a)
 
 
@@ -121,9 +121,9 @@ def cmd_light(dev, a):
     if a.rgb:
         fields["rgb"] = tuple(int(x, 0) for x in a.rgb.split(","))
     if not fields:
-        print("  " + lighting.describe(lighting.get(dev)))
+        print("  " + lighting.describe(lighting.get(dev, a.mode)))
         return
-    print("  " + lighting.describe(lighting.modify(dev, **fields)))
+    print("  " + lighting.describe(lighting.modify(dev, a.mode, **fields)))
 
 
 def cmd_keycolor(dev, a):
@@ -145,8 +145,9 @@ def cmd_keycolor(dev, a):
 
 
 def cmd_cfg(dev, a):
-    spaces.set_byte(dev, a.space, a.index, int(a.value, 0))
-    print(f"  {a.space} -> {' '.join(f'{x:02X}' for x in spaces.read(dev, a.space)[:8])}")
+    spaces.set_byte(dev, a.space, a.index, int(a.value, 0), a.mode)
+    print(f"  {a.space} -> "
+          f"{' '.join(f'{x:02X}' for x in spaces.read(dev, a.space, a.mode)[:8])}")
 
 
 def cmd_commands(dev, a):
@@ -186,6 +187,8 @@ def main(argv=None):
     for f in ("effect", "backlight", "speed", "sidelight"):
         sp.add_argument(f"--{f}", type=int)
     sp.add_argument("--rgb", help="R,G,B (also switches to fixed colour)")
+    sp.add_argument("--mode", type=lambda v: spaces.MODES[v], choices=[0, 1],
+                    metavar="{mac,win}", help="which mode's record (default: active)")
     sp.set_defaults(fn=cmd_light)
 
     sp = sub.add_parser("keycolor")
@@ -198,6 +201,9 @@ def main(argv=None):
     sp.add_argument("space", choices=list(spaces.SPACES))
     sp.add_argument("index", type=int)
     sp.add_argument("value")
+    sp.add_argument("--mode", type=lambda v: spaces.MODES[v], choices=[0, 1],
+                    metavar="{mac,win}",
+                    help="for func/light: which mode's record (default: active)")
     sp.set_defaults(fn=cmd_cfg)
 
     sp = sub.add_parser("log", help="stream the firmware debug log and state reports")
