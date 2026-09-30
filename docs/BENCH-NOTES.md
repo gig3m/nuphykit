@@ -350,7 +350,11 @@ drops the connection, including mid-sentence. Widely reported publicly.
    (owner, 2026-09-30):** on a shared bus the dongle *flatly doesn't work or stops
    working* — not intermittent. Consistent with its 6 interrupt endpoints at 1 ms
    (a large periodic reservation behind a hub's TT) being refused or starved, and
-   its queue flushing. Fix: dongle on its own root port. **Not the cause of the
+   its queue flushing. **It latches** (owner): once throughput fails it stays
+   dead, not recovering when the bus frees up — so a dongle firmware bug on top
+   of the bandwidth demand: its USB IN path (retry → `equal > max` → `over send
+   remove`, dongle `0x236A`-`0x23BE`) apparently never re-arms. Worth tracing if
+   anyone patches the dongle. Workaround: dongle on its own root port. **Not the cause of the
    intermittent mid-sentence repeats.** (A dongle patch to a longer `bInterval`
    could make it tolerate shared buses — optional.)
 2. Radio fade → keyboard drops a key-up after 50 retries (`loss a key`), never
