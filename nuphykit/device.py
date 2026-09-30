@@ -9,14 +9,12 @@ import os
 import sys
 import time
 
+# The hidapi wheel's default backend on Linux is libusb, which reports every
+# interface as usage 0/0 (so the raw interface can't be told apart) and needs
+# access to /dev/bus/usb. Its hidraw backend reports usages and opens the
+# /dev/hidraw nodes a udev uaccess rule grants to the desktop user.
 if sys.platform.startswith("linux"):
-    # hidapi's default libusb build reports usage_page 0 for every interface on
-    # Linux, so the raw interface cannot be found. The hidraw build reads the
-    # kernel's parsed report descriptors and gets it right.
-    try:
-        import hidraw as hid
-    except ImportError:
-        import hid
+    import hidraw as hid
 else:
     import hid
 

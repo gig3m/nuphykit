@@ -13,6 +13,6 @@ observation are marked as such in the source.
 from .device import Device, NuPhyError, COMMANDS, VID, PID_APP, PID_UPGRADER
 from . import spaces, keymap, lighting, bootloader
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __all__ = ["Device", "NuPhyError", "COMMANDS", "VID", "PID_APP", "PID_UPGRADER",
            "spaces", "keymap", "lighting", "bootloader"]

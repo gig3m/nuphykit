@@ -34,7 +34,7 @@ Rules this audit enforces:
    observed" still passes through the OS, which may rewrite it. A host-side
    remapper (Raycast's Hyper Key, on the Caps Lock scancode) silently inverted a
    T1 result for four rounds. **Before any keypress test, verify the host is not
-   transforming input** — see the checklist in HANDOFF. Corollary: prefer probe
+   transforming input** — see the checklist in docs/BENCH-NOTES.md. Corollary: prefer probe
    keycodes that no remapper would plausibly target. Plain letters again.
 6. **Ask for the control state explicitly at every step.** The contradiction
    survived two extra rounds because switch position was assumed rather than

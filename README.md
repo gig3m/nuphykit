@@ -9,6 +9,8 @@ This repo is a full reverse-engineering of that protocol, a toolkit that does
 what NuPhyIO won't, and a documented map of the firmware down to the flash
 protocol — enough to build custom firmware.
 
+![nuphykit reading a keyboard: its five storage spaces and lighting, then part of the decoded keymap](docs/screenshot.png)
+
 ## What this gives you that NuPhyIO doesn't
 
 - **Hyper on Caps Lock** — and any modifier combination. The whole `0x0100`–`0x1FFF`
@@ -26,17 +28,34 @@ protocol — enough to build custom firmware.
 
 ## Install
 
-No install. Requires `hidapi`, pulled on demand with [uv](https://docs.astral.sh/uv/):
+Install the `nuphykit` command straight from GitHub (needs `hidapi`, pulled in
+automatically):
+
+```bash
+uv tool install git+https://github.com/gig3m/nuphykit    # or: pipx install git+https://…
+nuphykit show
+```
+
+Or run from a checkout with no install at all:
 
 ```bash
 uv run --with hidapi python -m nuphykit show
 ```
 
-On Linux the `hidraw` backend (bundled with `hidapi`) is used automatically;
-the default libusb backend can't see HID usage pages, so it can't find the
-raw interface. The CLI talks over the USB cable; it works with the board in
-2.4G mode too (keystrokes then arrive via the dongle). Configuring through the
-dongle alone is untested.
+The examples below use `python -m nuphykit`; the installed `nuphykit` command is
+identical.
+
+**Linux:** the keyboard's HID nodes are root-only by default. One udev rule
+gives the desktop user access (no sudo needed afterwards); plug the keyboard in
+by cable, since the 2.4 GHz dongle doesn't carry the configuration interface (it
+answers every command itself, PROTOCOL §83). The cable works with the board
+switched to 2.4G too, which is how `diag` watches the wireless link:
+
+```bash
+echo 'KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="19f5", MODE="0660", TAG+="uaccess"' \
+  | sudo tee /etc/udev/rules.d/60-nuphy.rules
+sudo udevadm control --reload && sudo udevadm trigger
+```
 
 Quit NuPhyIO isn't required, but note that any CLI command orphans the app's
 session until you reload it (see Hazards).
@@ -154,7 +173,7 @@ byte map, and the flash frame builder checked against **real captured frames**.
 
 | file | contents |
 |------|----------|
-| `HANDOFF.md` | read first: board state, hazards, protocol on a page |
+| `docs/BENCH-NOTES.md` | the maintainer's bench log: state of the test board, hazards, protocol on a page |
 | `PROTOCOL.md` | the spec, every claim tagged by evidence tier |
 | `AUDIT.md` | evidence rules and what is **not** proven |
 | `SWEEP.md` | the UI-option sweep and its results |

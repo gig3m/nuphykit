@@ -23,8 +23,10 @@ import sys
 from . import data, diag, keymap, lighting, log, spaces
 from .device import COMMANDS, Device, NuPhyError
 
-SNAP = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                    "snapshots")
+# In a checkout, backups live in the repo's snapshots/; installed, in ./snapshots.
+_REPO_SNAP = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                          "snapshots")
+SNAP = _REPO_SNAP if os.path.isdir(_REPO_SNAP) else os.path.join(os.getcwd(), "snapshots")
 
 
 def _path(name):
