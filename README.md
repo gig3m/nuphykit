@@ -57,6 +57,7 @@ python -m nuphykit light --effect 6 --backlight 50
 python -m nuphykit keycolor 255,0,0 W A S D --clear   # PER-KEY colour
 python -m nuphykit cfg func 1 1             # disable Win key
 python -m nuphykit commands                 # NuPhy's own command names
+python -m nuphykit log                      # live firmware debug log: radio, pairing, RSSI
 ```
 
 ## The five storage spaces

@@ -1070,7 +1070,7 @@ were deliberately excluded.**
 | `0xC2` | GetMacro | `40 00 50 00 50 00 ...` | **the 32-entry offset table** |
 | `0xB8` | GetTapDance | 8-byte records | matches |
 | `0xE6` | GetTouchBarConfig | empty | this board likely has no touch bar |
-| `0x2F` | GetDongelName | `01 ff ff...` | no dongle attached |
+| `0x2F` | GetDongelName | `01 ff ff...` | ~~no dongle attached~~ **CORRECTED 2026-09-29:** identical with a dongle paired and connected — meaning unknown |
 
 **`GetLightCount` = 119 independently confirms the LED count** previously *inferred*
 from a 357-byte frame being 119x3. That inference is now **[CONFIRMED, T2]**.
@@ -2918,3 +2918,83 @@ development — keeping the stock USB + `0xEF` recovery code byte-identical in e
 flashed image — is recoverable on the keyboard itself with no case-opening. The
 devboard (or a single case-open to locate the BOOT pad) only adds a safety net for
 the "totally dead build" case, which careful development avoids.
+
+## 82. The firmware debug log streams over the raw interface — radio visibility [T1/T2]
+
+Found 2026-09-29 while chasing a dead 2.4G link. **The board pushes its printf
+debug log to the host as `0xFE LogUpload` reports** on the raw interface — the
+same strings §64 listed from the binary, live. `GetDebugEnable` (`0xFD`) reads
+`0xBB` on this board; it was never set by us, so this is presumably the shipped
+state [T4 for "shipped"]. Nothing needs enabling.
+
+### Frame format [T2]
+
+```
+fe <parts> <index> <text, space-padded to 64>
+```
+
+**Plaintext — not XORed with the session key.** Listening needs no `0xEE`
+handshake, so it does **not** orphan NuPhyIO's session (§60). A message longer
+than 61 bytes spans frames sharing `parts`, index `0..parts-1`, continuing
+mid-word. Two other unsolicited reports ride the same pipe, also plaintext:
+
+| report | meaning | seen |
+|--------|---------|------|
+| `0xA2 ModeStateChange` | byte 1 = active layer; byte 2 = `01` in the Windows set | `a2 02` on `TG(2)`, `a2 01` while Fn (`MO(1)`) is held, `a2 04 01` on flipping to Win |
+| `0xD7 LightStateChange` | the 17-byte lighting record of the mode just entered | every Mac/Win flip (§62) |
+
+`nuphykit log` decodes all three live (`--raw` for hex).
+
+### What the radio tells us
+
+A 2.4G attempt that **failed** (keyboard switched to 2.4G, dongle plugged in the
+whole time):
+
+```
+======cur channel 4, addr 7B00, mac 000000000000 ========      <- 2.4G slot is EMPTY
+=========2.4g Mode, channel 8, addr 1903575337 ========
+=========switch to rf 24==========
+===========keyboard want to pair, channel 34, addr 1207380725 ======
+                                                                 <- ...silence
+```
+
+And the fix — switch to 2.4G, then **unplug and replug the dongle**:
+
+```
+===========keyboard want to pair, channel 2, addr 1207380725 ======
+dongle 1,  mac 11107D5E3D0C, rssi 62
+choice mac 11107D5E3D0C, rssi 62
+=======actory_test 0
+rf has connected
+err rate samples: 0 0 0 0 0
+====chan 2, rate 0, rssi -60, ack 1 ===                        <- periodic link health
+```
+
+A BLE connect, for comparison (slot 1 = BT1, `mac` is the keyboard's own BLE
+address, matching the host's view `F4:00:F5:2A:F7:47` byte-reversed):
+
+```
+=========switch to ble channel 1 ==========
+======cur channel 1, addr 7800, mac 47F72AF500F4 ========
+Initialized.. / Advertising.. / ble connected, remote mac 2018387EF908
+Phy update Rx:2 Tx:2 ..                                         <- 2M PHY
+set connect param failed 0x:18                                  <- every connect; link still works
+```
+
+Conclusions:
+
+- **The link slots (`cur channel 1..4`, `addr 7800..7B00`) are separate storage**
+  holding the BLE bonds and the 2.4G pairing. None of the five spaces (§63)
+  contains them, so `backup`/`restore` cannot preserve them. **[T2]**
+- **An empty 2.4G slot makes the keyboard pair on every 2.4G selection**, and the
+  dongle only answers pairing just after it is plugged in. The 2026-08-08 factory
+  reset is the likely eraser (it clears "everything"), and 2.4G stayed dead from
+  then until this re-pair. **[T1 for the fix; T4 for the cause]**
+- **Recovery: select 2.4G, then replug the dongle.** No app, no key combo. **[T1]**
+- The periodic `chan / rate / rssi / ack` line and `err rate samples`, plus the
+  hop messages (`do hop channel %d -> %d`, `channel %d is too bad, should jump`,
+  `rollback to channel`), are the instrumentation for diagnosing 2.4G dropouts
+  and key repeat. **[OPEN]**
+- `0x2F GetDongelName` returns `01 ff ff...` with the dongle connected, so §51's
+  "no dongle attached" reading was wrong. **[T2]**
+

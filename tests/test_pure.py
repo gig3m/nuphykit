@@ -11,7 +11,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from nuphykit import bootloader, data, keymap, lighting, spaces  # noqa: E402
+from nuphykit import bootloader, data, keymap, lighting, log, spaces  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FW = os.path.join(ROOT, "firmware", "Air100v3_US_v1.0.6.6_20260723.bin")
@@ -88,6 +88,23 @@ for idx, want in ((0x6C, [2, 0x6C, 0, 0, 0x2A, 0x39]), (0x6D, [2, 0x6C, 0, 0, 0x
 fd = FakeDev(bytes(4))
 spaces.set_byte(fd, "func", 1, 1)
 check("func set_byte stays 1 byte", fd.sent, [[1, 1, 0, 0, 1]])
+
+print("\nunsolicited report decoding (PROTOCOL 82)")
+
+
+def frame(*head, text=b""):
+    return bytes(head) + text + b" " * (64 - len(head) - len(text))
+
+
+pend = []
+check("log single", log.decode(frame(0xFE, 1, 0, text=b"rf has connected \n"), pend),
+      "rf has connected")
+# A non-final part fills all 61 text bytes; the next part continues mid-word.
+part1 = b"=" * 11 + b"keyboard want to pair, channel 34, addr 1207380725"
+check("log part 1 waits", log.decode(bytes([0xFE, 2, 0]) + part1, pend), None)
+check("log part 2 joins", log.decode(frame(0xFE, 2, 1, text=b" ======\n"), pend),
+      part1.decode() + " ======")
+check("mode report", log.decode(frame(0xA2, 4, 1), pend), "[mode] layer 4  a2 04 01 20")
 
 print("\nlighting byte map")
 st = bytes([0x06, 0x32, 0x02, 0x00, 0x01, 0x00, 0x00, 0x05, 0x80,

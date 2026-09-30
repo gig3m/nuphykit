@@ -9,6 +9,7 @@
     uv run --with hidapi python -m nuphykit light [--effect N] [--backlight N] ...
     uv run --with hidapi python -m nuphykit keycolor 255,0,0 W A S D --clear
     uv run --with hidapi python -m nuphykit cfg <space> <index> <value>
+    uv run --with hidapi python -m nuphykit log [--raw] [--seconds N]
 """
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ import json
 import os
 import sys
 
-from . import data, keymap, lighting, spaces
+from . import data, keymap, lighting, log, spaces
 from .device import COMMANDS, Device, NuPhyError
 
 SNAP = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -197,13 +198,23 @@ def main(argv=None):
     sp.add_argument("value")
     sp.set_defaults(fn=cmd_cfg)
 
+    sp = sub.add_parser("log", help="stream the firmware debug log and state reports")
+    sp.add_argument("--raw", action="store_true", help="hex frames, undecoded")
+    sp.add_argument("--seconds", type=float, help="stop after N seconds")
+
     a = p.parse_args(argv)
     try:
+        if a.cmd == "log":
+            # Plaintext reports: no handshake, so NuPhyIO's session survives.
+            log.listen(a.raw, a.seconds)
+            return 0
         with Device() as dev:
             return a.fn(dev, a) or 0
     except (NuPhyError, ValueError) as e:
         print(f"nuphykit: {e}", file=sys.stderr)
         return 2
+    except KeyboardInterrupt:
+        return 0
 
 
 if __name__ == "__main__":
