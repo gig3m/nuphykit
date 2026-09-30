@@ -106,8 +106,8 @@ teardown:
 - **Flash protocol** — reimplemented and verified byte-for-byte vs NuPhyIO
   (`nuphykit/bootloader.py`).
 - **CORRECTED 2026-09-29 [T2]:** `PA5`/`PA6` are the knob's rotary-encoder
-  lines (QMK encoder table at `0x3FC84`), not the Mac/Win switch, which is still
-  unlocated. The tap-dance code *does* have a hold path (register on timeout,
+  lines (QMK encoder table at `0x3FC84`), not the Mac/Win switch. The Mac/Win
+  switch is **`PB9`** and the cable/wireless switch **`PB8`** (PROTOCOL §84). The tap-dance code *does* have a hold path (register on timeout,
   unregister on key-up; 100 ms floor on the timing field), so the tap-hold
   limitation is not explained by the firmware code (PROTOCOL §73, §79).
 - `0xE3`/`0xE5`/`0xE6` (debounce, touch-bar) are no-op acks in 1.0.6.6 — 38

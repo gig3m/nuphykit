@@ -1364,7 +1364,7 @@ disagree. Any T1 test involving Ctrl or Caps on this board is unreliable until t
 swap state is known, and a configurator that shows the stored keycode will lie to
 the user for exactly these two keys.
 
-Workaround while the flag is unlocated: **invert them in the keymap.** Writing
+Workaround while the flag is set (located 2026-09-29, §84 — `0x7001` clears it): **invert them in the keymap.** Writing
 `KC_CAPS` to the Ctrl position yields a working Control key, and vice versa.
 
 **[OPEN]** how the swap is toggled. Not exposed by NuPhyIO, so presumably an `Fn`
@@ -1824,7 +1824,8 @@ RSSI, `switch to rf 24`, `switch to BLE channel %d`, `dongle %d, mac %s`,
 `actory_test` (factory test). None of that is exposed on this wired unit.
 
 **No `caps`/`ctrl`/`swap`/`lock` string exists anywhere in the binary** — so the
-Ctrl/Caps swap (§58) is not a named debug feature and remains unlocated.
+Ctrl/Caps swap (§58) is not a named debug feature. (Located 2026-09-29: it is
+QMK's `keymap_config`, whose magic handler prints nothing — §84.)
 
 ## 65. Firmware static analysis [T2/T4]
 
@@ -2799,7 +2800,8 @@ The same setter `0xF5` uses for sleep byte 0 (`0x14B34`); `0xF3` reads it back
 (`0x0F082`). So `0xF4` sets auto-sleep on/off **in RAM, without persisting**. The
 app's report/event enum names `SleepCfgChange=0xF4` (§50) — the same number, though
 there it is an event type, so the match is suggestive only. It reads no
-GPIO; ~~Mac/Win switch = PA5~~ is withdrawn — PA5/PA6 are the knob encoder (§73).
+GPIO; ~~Mac/Win switch = PA5~~ is withdrawn — PA5/PA6 are the knob encoder (§73);
+the Mac/Win switch is PB9 (§84).
 The PA5-sampling routine at `0x0F488` exists but is sleep-entry code, not `0xF4`.
 
 ### Sleep config is 6 bytes, not 4
