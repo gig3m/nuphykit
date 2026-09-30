@@ -12,9 +12,10 @@ Byte map, established by reading before/after each single UI change:
 0xD6 accepts partial writes (§62). One record per Mac/Win mode: `mode` picks
 it through the pad byte, defaulting to the active mode (§84).
 
-There is no per-key colour control: 0xD2 GetKeyLightColor is a READ of the
-rendered LED frame (357 bytes = 119 LEDs x 3) with no Set counterpart (§54), and
-the app polls it to animate its own preview.
+0xD2 GetKeyLightColor is a READ of the rendered LED frame (357 bytes = 119 LEDs
+x 3); the app polls it to animate its own preview. Per-key colour is SET with the
+hidden opcode 0xD8 under hidden effect >= 21 (§76-78) - see enable_custom() and
+set_key_colors() below.
 """
 from __future__ import annotations
 
@@ -87,9 +88,8 @@ def describe(state: bytes) -> str:
 def read_led_frame(dev: Device) -> bytes:
     """Read the live rendered LED frame (357 bytes, RGB per LED).
 
-    This is what the app polls to animate its on-screen preview. It is READ-ONLY:
-    there is no SetKeyLightColor in the command set, so per-key colour cannot be
-    driven this way.
+    This is what the app polls to animate its on-screen preview. It is READ-ONLY;
+    per-key colour is driven by the hidden 0xD8 instead (set_key_colors, §76-78).
     """
     out = bytearray()
     while len(out) < LED_FRAME:

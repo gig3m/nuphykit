@@ -13,19 +13,24 @@ behaviour), **[SOURCED]** (read from NuPhy's code, not exercised), or
 ## 0. Why VIA cannot work — CORRECTED (see §70)
 
 > **This section was misleading.** It said "V3 is QMK-derived but the VIA endpoint
-> is gone", which implies QMK with VIA switched off. **It is not QMK at all.**
-> The firmware contains **zero** QMK/ChibiOS/VIA markers and is built on WCH's
-> CH58x SDK. NuPhy reused QMK's *keycode numbering*, nothing more. Full evidence
-> in §70.
+> is gone", which implies QMK with VIA switched off. ~~It is not QMK at all.
+> The firmware contains zero QMK/ChibiOS/VIA markers and is built on WCH's
+> CH58x SDK. NuPhy reused QMK's keycode numbering, nothing more.~~
+> **CORRECTED 2026-09-29 [T2]:** there are no QMK/VIA *strings*, but the code
+> contains QMK core logic — eeconfig (magic `0xFEE6`), `keymap_config` and
+> `process_magic` (§57/§84), `sym_eager_pk` debounce, the `encoder_LUT` (§73).
+> So: NuPhy's own firmware on WCH's SDK with **QMK-derived core code**, no VIA
+> (the VIA conclusion stands). Evidence in §70 and §84.
 
 Basic keycodes are stock QMK/HID (`KC_A=0x04`, `KC_ESC=0x29`, `KC_CAPS=0x39`) and
 `MO(1)` is `0x5221`, matching upstream exactly — but that is a shared numbering
 convention, not shared code. No VIA JSON will ever make `usevia.app` talk to this
 board. **[CONFIRMED]**
 
-QMK's mod-tap is not compiled in: writing `MT(MOD_HYPR, KC_ESC)` (`0x2F29`)
-applies the modifiers and silently discards the tap half. NuPhy shipped their own
-"Tap Dance" instead. **[CONFIRMED]**
+~~QMK's mod-tap is not compiled in: writing `MT(MOD_HYPR, KC_ESC)` (`0x2F29`)
+applies the modifiers and silently discards the tap half.~~ **CORRECTED 2026-09-29
+[T1]:** mod-tap works — `0x2F29` gives tap = Esc, hold = Hyper (§22). NuPhy also
+shipped their own "Tap Dance".
 
 ## 1. Transport
 
@@ -88,6 +93,8 @@ Four commands follow the handshake before writes are accepted:
 
 All four are acked. **[CONFIRMED]** Their individual meanings are unknown, and
 which of them actually unlocks writing has not been isolated. **[HYPOTHESIS]**
+**CORRECTED (§39, T2):** none of them is needed — the handshake alone authorises
+writes.
 
 ## 4. Commands
 
@@ -122,7 +129,8 @@ unknown. **[HYPOTHESIS]** a sub-command or record-type selector.
 does **not** reflect writes. This burned an hour: Caps read back `0x39` while
 physically producing Hyper. NuPhy's HE enum has both `GetDefaultKeyMatrix` and
 `GetUseKeyMatrix`, so an active-matrix opcode exists but is not identified here.
-**Verify writes by typing.** **[CONFIRMED]**
+**Verify writes by typing.** **[CONFIRMED]** (Identified since: `0xB2 GetUseKeys`
+reads the active keymap — §50, §53.)
 
 ### 4.3 HE-family enum, for reference **[SOURCED]**
 
@@ -184,8 +192,11 @@ entry / reset to a key. `nuphy` refuses both without `--force`.
 - **A device reset wipes them** back to factory. **[CONFIRMED]**
 - **NuPhyIO does NOT revert out-of-band writes.** Tested in session 3: dump,
   full app connect cycle, dump again - byte-identical. The earlier claim was
-  wrong; those failures were the missing session handshake (sec 3). You still
-  need to quit it, because it holds the device session. **[CONFIRMED]**
+  wrong; those failures were the missing session handshake (sec 3). ~~You still
+  need to quit it, because it holds the device session.~~ **[CONFIRMED]**
+  **CORRECTED 2026-09-29 [T2]:** quitting is not needed — CLI reads work with the
+  app open; the real conflict is that each CLI handshake orphans the *app's*
+  session (§60).
 
 ## 8. Firmware / bricking risk
 
@@ -206,9 +217,10 @@ guarantee.
 
 Flashing happens in the renderer over WebHID; `preload.js` exposes only theme,
 window and `electron-updater` IPC, and `electron-updater` updates the *app*, not
-the keyboard. No firmware is published for the Air100 V3
+the keyboard. ~~No firmware is published for the Air100 V3
 (`lastFirmwareVersion: null`), so there is no image to inspect and **whether
-images are signed remains unknown**.
+images are signed remains unknown**.~~ **CORRECTED:** the image is published and
+unencrypted (§64), and the bootloader does no validation (§69, T1).
 
 Device-role enum (module `44437`, `Xt`): `keyboard=0x1 upgrader=0x2 dongle=0x4`.
 
@@ -360,20 +372,22 @@ modifiers while another key is pressed. That is what `0x0F00` is for.
 `0xD2` is a **live per-LED frame stream**: 357 bytes per frame (119 LEDs x 3),
 chunked as 6x54 + 33. It runs continuously while the Lighting panel is open —
 4,864 frames captured in about a minute — so it is a preview stream, with `0xD6`
-holding the persisted config.
+holding the persisted config. **CORRECTED (§54):** it is the app *polling* a
+read of the rendered LEDs; per-key colour is set by hidden `0xD8` (§76-§78).
 
 Colour bytes verified: `4e 00 ff` and `fc 16 16` matched the picker exactly.
 
 ## 16. Mode settings
 
 ```
-0xE2  01 00 00 00 <1|2|3>    anti-wobbliness / debounce level (Low/Med/High)
+0xE2  01 00 00 00 <1|2|3>    anti-wobbliness = debounce lock, value x 10 ms (§84)
 0xE2  01 01 00 00 <0|1>      Disable Win
 ```
 
 The "Mode Settings" tab is *not* the M1/M2/M3 profile switch — it is Disable
 Win / Alt+F4 / Alt+Tab plus debounce. M1/M2/M3 profile switching was not
-captured. **[OPEN]**
+captured. ~~**[OPEN]**~~ M1/M2 are the Mac/Win base-bank sets (§20); byte 3 of
+the `0xE2` payload picks which mode's record is written (§84).
 
 ## 17. Additional opcodes
 
@@ -473,10 +487,14 @@ sessions on that inference alone.
 > under test (plain letters settled this in one round), and **verify the host is
 > not transforming input before trusting any keypress observation.**
 >
-> The tell was visible all along: the keyboard's own `0x0F00` sets four modifier
+> ~~The tell was visible all along: the keyboard's own `0x0F00` sets four modifier
 > bits across successive HID reports, so keydowns arrive **staggered** ~5 ms
 > apart and build up (`ctrl` → `ctrl+shift` → ...). A software remapper injects
-> all four in a **single atomic event**. Staggered = keyboard. Atomic = host.
+> all four in a **single atomic event**. Staggered = keyboard. Atomic = host.~~
+> **CORRECTED 2026-09-29 [T1]:** raw HID capture shows `0x0F00` sends all four
+> modifier bits in **one** report; the stagger was the host splitting it into
+> per-modifier events. There is no timing tell — read reports below the OS
+> (`/dev/hidraw*`, BENCH-NOTES HAZARD 8).
 
 Practical consequence: a remap applied in Mac mode does **not** exist in Windows
 mode. Write it to `layer + 4` as well. Concretely, Caps=Hyper in bank 0 reverts to
@@ -868,7 +886,8 @@ Carried forward from `AUDIT.md` §B and §C — these are **not** established:
 - DKS/RS/HT being impossible (source inference, never sent to the device)
 - the enum->wire table (positional alignment is inference; pairs unverified)
 - ~~`0x1700` being knob actions (named from content, no differential test)~~ —
-  **FALSIFIED**, §56. The knob is matrix slots 108/109; `0x1700` is unexplained.
+  **FALSIFIED**, §56. The knob is matrix slots 108/109; `0x1700` is ~~unexplained~~
+  erased/unallocated (§59).
 - "no commit opcode exists" (restate: none is required)
 
 And twelve subsystems in `AUDIT.md` §C have never been probed at all.
@@ -962,11 +981,14 @@ there is no short DFU timeout.
 
 Side effect: this **confirms by observation** what section 8 previously inferred
 from the manifest — the bootloader is a real, separately enumerated USB device.
-Recovery is expected to be a power cycle (unplug/replug).
+~~Recovery is expected to be a power cycle (unplug/replug).~~ **CORRECTED:** power
+cycling does *not* exit it; only a reflash does (BENCH-NOTES HAZARD 4, §67). The
+culprit was `0xEF SetIapMode` (§50).
 
-**Do not sweep opcodes on a device you cannot physically reach.** The bootloader
+**Do not sweep opcodes on a device you cannot physically reach.** ~~The bootloader
 protocol is not documented in the app bundle in any form found so far, so there
-is no known software path back to the application firmware.
+is no known software path back to the application firmware.~~ NuPhyIO's update
+flow recovers it automatically, and the flash protocol is now known (§67-§69).
 
 ## 48. NuPhyIO's web app is unreliable — the device is not
 
@@ -1002,7 +1024,8 @@ odd "FN 1" view the app rendered in session 4. A repeated 24-byte pattern
 
 **[HYPOTHESIS]** these are secondary/derived keymap copies, possibly the app's
 "Recommended Configuration" staging or a factory-default backup. Confirming needs
-a UI differential, which is blocked by sec 48. **[OPEN]**
+a UI differential, which is blocked by sec 48. ~~**[OPEN]**~~ **RESOLVED
+(§55.1):** unallocated macro arena holding stale flash.
 
 ---
 
@@ -1064,13 +1087,13 @@ were deliberately excluded.**
 | `0xD5` | GetLightState | `08 08 02 00 00 00 08 00 14 04 3c 02 01 00 ff 00 00` | effect/brightness/speed/colour |
 | `0xE1` | GetKeyboardFunc | `08 08 00 00` | mode settings |
 | `0xF3` | GetSleepInfo | `00 06 19 04` | sleep config |
-| `0xA0` | GetBase | `00 08 04 06 12 82` | base info |
+| `0xA0` | GetBase | `00 08 04 06 12 82` | base info; byte 0 = active mode, 0 Mac / 1 Win (§84); rest hardcoded (§80) |
 | `0xB5` | GetSOCD | `00 50 01 01 00 4f 00 01` | matches the 8-byte record layout |
 | `0xBB` | GetTGL | `00 06 ff ff ... 00 39` | matches the 2-byte record layout |
 | `0xC2` | GetMacro | `40 00 50 00 50 00 ...` | **the 32-entry offset table** |
 | `0xB8` | GetTapDance | 8-byte records | matches |
 | `0xE6` | GetTouchBarConfig | empty | this board likely has no touch bar |
-| `0x2F` | GetDongelName | `01 ff ff...` | ~~no dongle attached~~ **CORRECTED 2026-09-29:** identical with a dongle paired and connected — meaning unknown |
+| `0x2F` | GetDongelName | `01 ff ff...` | ~~no dongle attached~~ **CORRECTED 2026-09-29:** identical with a dongle paired and connected — 20 bytes from the link-info block, DF `0x051C` (§84) |
 
 **`GetLightCount` = 119 independently confirms the LED count** previously *inferred*
 from a 357-byte frame being 119x3. That inference is now **[CONFIRMED, T2]**.
@@ -1082,8 +1105,8 @@ second channel.
 ## 52. AppDefine — likely the unidentified config blobs
 
 `GetAppDefineSize` reports **954 bytes (0x03BA)**. The unexplained regions sit at
-`0x0900`-`0x1BFF`. **[HYPOTHESIS]** the `0xFB`/`0xFC` AppDefine store is what
-occupies them; `0xFB` at addr 0 returned zeros, so the addressing base for
+`0x0900`-`0x1BFF`. ~~**[HYPOTHESIS]** the `0xFB`/`0xFC` AppDefine store is what
+occupies them;~~ **FALSIFIED (§55)** — AppDefine is separate app scratch; `0xFB` at addr 0 returned zeros, so the addressing base for
 AppDefine is not yet known. Testable with `0xFB` reads across offsets — safe,
 read-only, and does **not** require NuPhyIO.
 
@@ -1123,7 +1146,10 @@ The configs that are genuinely **not** in this memory — `GetLightState`,
 `GetKeyboardFunc`, `GetSleepInfo`, `GetBase`, `GetFirmwareInfo` — are therefore
 volatile or computed state rather than stored config, since their bytes appear
 nowhere in `0x0000`-`0x1FFF`. **[CONFIRMED, T2]** for the absence;
-**[HYPOTHESIS]** for "volatile rather than stored elsewhere".
+**[HYPOTHESIS]** for "volatile rather than stored elsewhere". **CORRECTED
+2026-09-29 [T2]:** light, func and sleep *are* stored elsewhere — in QMK eeprom
+emulation in data flash, outside the `0xB2` window (§84). `GetBase` and
+`GetFirmwareInfo` are computed.
 
 ### 53.1 Table bases, consolidated
 
@@ -1265,7 +1291,8 @@ are one byte. Harmless, but any tool computing a checksum or a byte budget over
 
 Part 5 named `0x1700`-`0x174B` "knob / rotary actions" from content alone
 (`00 a9 00 aa` pairs). Letters planted at `0x1700` and `0x1702` produced nothing
-on rotation. Its 7 entries of volume codes are unexplained. **[OPEN]** — and a
+on rotation. Its 7 entries of volume codes are unexplained. ~~**[OPEN]**~~
+**RESOLVED (§59):** erased after a factory reset — residue, not structure. And a
 reminder that naming a region from its content is how it sat wrong for 5 sessions.
 
 ### Orientation indicator
@@ -1275,7 +1302,7 @@ changing the **top-row LEDs** on rotation instead of acting on the turn. This co
 one full test round — the probe letters appeared not to work when the real cause
 was an unseated module. **[T1]**
 
-## 57. Quantum blocks `0x5600` / `0x7000` — stored, unimplemented [T1]
+## 57. Quantum blocks `0x5600` / `0x7000` — swap-hands inert; `0x7000` is live magic (CORRECTED) [T1/T2]
 
 Both were known to *store* in the keymap (§46), but storage never proved
 behaviour. Now tested on hardware.
@@ -1353,7 +1380,7 @@ Ruled out, each by direct check:
 
 `GetKeyboardFunc` (`0xE1`) returns exactly **4 bytes, `08 08 00 00`**, and ignores
 the offset field — the same 4 bytes come back at offsets 0/4/8/16. Whether the
-swap flag is one of them is **unknown**: there is no baseline to diff against,
+swap flag is one of them is **unknown** (it is not — §59, §84): there is no baseline to diff against,
 and the flag was already set when the space was first read. The app's parser is
 webpack module `505` (`KeyboardFunc`), not yet extracted — that needs the web app
 loaded, which is blocked by §48.
@@ -1367,8 +1394,11 @@ the user for exactly these two keys.
 Workaround while the flag is set (located 2026-09-29, §84 — `0x7001` clears it): **invert them in the keymap.** Writing
 `KC_CAPS` to the Ctrl position yields a working Control key, and vice versa.
 
-**[OPEN]** how the swap is toggled. Not exposed by NuPhyIO, so presumably an `Fn`
-combo. Once a toggle is known, one before/after read of `0xE1` locates the flag.
+~~**[OPEN]** how the swap is toggled. Not exposed by NuPhyIO, so presumably an `Fn`
+combo. Once a toggle is known, one before/after read of `0xE1` locates the flag.~~
+**RESOLVED 2026-09-29 [T2]:** the `0x7000` magic keycode sets it and `0x7001`
+clears it; the flag is QMK `keymap_config` bit 0 at eeprom word `0x004` (DF
+`0x5004`), which no command reads (§57, §84).
 
 
 ## 59. Factory reset — a true baseline, and what it exposed [T1/T2]
@@ -1451,10 +1481,12 @@ a factory reset clears many things at once — and the causal reading was wrong.
 `GetBase` (`0xA0`) was **identical** before and after the reset
 (`00 08 04 06 12 82`), so it is not there either.
 
-**[OPEN]** where the swap lives. The productive next step is not more byte
+~~**[OPEN]** where the swap lives. The productive next step is not more byte
 guessing: it is learning **how the swap is toggled** (not exposed by NuPhyIO, so
 presumably an `Fn` combo). One toggle gives a full-device before/after diff
-across every readable space at once, instead of a 4-byte window.
+across every readable space at once, instead of a 4-byte window.~~
+**RESOLVED 2026-09-29 [T2]:** eeprom word `0x004`, set by `0x7000`, cleared by
+`0x7001` — outside every readable space (§57, §84).
 
 > **Probe note:** `KC_CAPS` is a poor probe on macOS. Caps Lock is an OS-level
 > toggle, so the browser sees only partial key events — on first press just the
@@ -1483,11 +1515,12 @@ Payload is the uniform `<len> <addr16 LE> <pad> <data>`. The last frame was a
 
 ### The map
 
-`0xE1 GetKeyboardFunc` / `0xE2 SetKeyboardFunc` address a **4-byte** space:
+`0xE1 GetKeyboardFunc` / `0xE2 SetKeyboardFunc` address a **4-byte** space
+(one record **per Mac/Win mode**, picked by payload byte 3 — §84):
 
 | index | setting | domain | factory |
 |-------|---------|--------|---------|
-| 0 | Anti-Wobbliness Level | `1` Low, `2` Intermediate, `3` High | `2` |
+| 0 | Anti-Wobbliness Level = debounce lock, value x 10 ms (§84) | `1` Low, `2` Intermediate, `3` High | `2` |
 | 1 | Disable Win | `0` / `1` | `0` |
 | 2 | Disable Alt+F4 | `0` / `1` | `0` |
 | 3 | Disable Alt+Tab | `0` / `1` | `0` |
@@ -1544,7 +1577,9 @@ CLI write -> app reload -> UI re-render.
 | 0 | Auto Sleep | `01` (on) |
 | 1 | Level 1 Sleep, **minutes** | `06` |
 | 2 | Level 2 Sleep, **minutes** | `18` = 24 |
-| 3 | unknown | `04` |
+| 3 | ~~unknown~~ early-sleep delay, seconds (CORRECTED 2026-09-29 [T2], §79) | `04` |
+
+(`0xF5` persists **6** bytes; bytes 4-5 are not returned by `0xF3` — §79.)
 
 Confirmed bidirectionally: writing index 1 = `0x09` from the CLI made the app
 render "Level 1 Sleep: 9 minute" after a reload.
@@ -1680,13 +1715,14 @@ The board has **four** distinct spaces, not one:
 1. CONFIG MEMORY   0x0000-0x1BFF   0xB2 read / 0xB3 write
      keymap (8 banks x 0xDC), macro offset table + arena,
      SOCD / TapDance / TGL tables.   restore.py covers ONLY this.
-2. KEYBOARD FUNC   4 bytes         0xE1 get / 0xE2 set   (single-byte writes OK)
-     0 anti-wobbliness  1 disable-Win  2 disable-Alt+F4  3 disable-Alt+Tab
+2. KEYBOARD FUNC   4 bytes x2 (per Mac/Win mode, §84)  0xE1 get / 0xE2 set   (single-byte writes OK)
+     0 debounce x10 ms  1 disable-Win  2 disable-Alt+F4  3 disable-Alt+Tab
 3. SLEEP CFG       4 bytes         0xF3 get / 0xF5 set   (WHOLE RECORD ONLY)
-     0 auto-sleep  1 level-1 minutes  2 level-2 minutes  3 unknown (04)
+     0 auto-sleep  1 level-1 minutes  2 level-2 minutes  3 early-sleep s (04, §79)
 4. APPDEFINE       0x03BA bytes    0xFB get / 0xFC set   (single-byte writes OK)
      0x70 app version string  0xA8 accessory switch (0 knob / 1 button)
-   plus LIGHTING   17 bytes        0xD5 get / 0xD6 set   (WHOLE RECORD ONLY)
+   plus LIGHTING   17 bytes x2 (per Mac/Win mode, §84)  0xD5 get / 0xD6 set
+                   (CORRECTED 2026-09-29 [T2]: partial writes OK, §62)
 ```
 
 **A factory reset clears all of them; `restore.py --fix` restores only #1.** Any
@@ -1706,7 +1742,8 @@ configurator claiming to back up "the keyboard" must cover all five, or say so.
   model definition lists `especialKeys: [SquareKnob]` only — no `LeftRightSlider`.
   The opcode exists in the shared enum for other boards. **Not a gap.**
 - **Polling rate.** No such control in any panel for this model.
-- **Per-key colour.** No UI control, and `0xD2` has no Set counterpart (§54).
+- **Per-key colour.** No UI control. ~~and `0xD2` has no Set counterpart (§54).~~
+  **CORRECTED:** the firmware sets it via hidden `0xD8` under effect >= 21 (§76-§78).
 
 ### The app's model corroborates the knob mapping (§56)
 
@@ -1727,9 +1764,11 @@ rotation living in the synthetic row 6 (slots 108/109).
 
 ### Still unresolved after the sweep
 
-1. **The Ctrl/Caps swap (§58).** No UI control touches it. Not in any of the four
-   spaces as far as the sweep reached.
-2. `sleep` index 3 (factory `04`) — present, purpose unknown.
+1. ~~**The Ctrl/Caps swap (§58).** No UI control touches it. Not in any of the four
+   spaces as far as the sweep reached.~~ **RESOLVED 2026-09-29 [T2]:** eeprom word
+   `0x004`, toggled by `0x7000`/`0x7001`, reachable by no command (§57, §84).
+2. ~~`sleep` index 3 (factory `04`) — present, purpose unknown.~~ **RESOLVED
+   2026-09-29 [T2]:** early-sleep delay in seconds (§79).
 3. Lighting byte 2 speed scale — the byte is identified, the gear mapping is not.
 4. The 14 bytes written once at `0x0F44` on first Mode Settings use (§60).
 
@@ -1811,7 +1850,8 @@ Kyle asked in session 1 whether custom firmware was feasible. The evidence now:
 3. **Strong lead on flashing:** CH58x parts ship a factory IAP bootloader, and
    WCH's ISP protocol has open tooling (`wchisp`). The "NuPhy Device Upgrader"
    (PID `0x072D`) may simply be that standard bootloader — which would mean the
-   flash protocol needs no capture at all. **Untested.**
+   flash protocol needs no capture at all. **Untested.** **Retracted (§67):**
+   it is NuPhy's own bootloader (VID stays `0x19F5`), not WCH ISP.
 
 Caveats, stated plainly: none of this has been exercised. Nothing has been
 disassembled, no build has been produced, and the bootloader has not been probed
@@ -1821,7 +1861,8 @@ since the accidental entry in §47. Feasibility looks good; it is not demonstrat
 
 The board runs BLE **and** 2.4 GHz RF as well as wired: channel hopping, pairing,
 RSSI, `switch to rf 24`, `switch to BLE channel %d`, `dongle %d, mac %s`,
-`actory_test` (factory test). None of that is exposed on this wired unit.
+`actory_test` (factory test). ~~None of that is exposed on this wired unit.~~
+(The board is also used over 2.4G/BLE since; the radio log streams live — §82.)
 
 **No `caps`/`ctrl`/`swap`/`lock` string exists anywhere in the binary** — so the
 Ctrl/Caps swap (§58) is not a named debug feature. (Located 2026-09-29: it is
@@ -1931,22 +1972,26 @@ from the firmware's own descriptor rather than from probing.
 - **No command dispatch table.** The 39 known opcodes appear scattered as
   immediates with no clustering, no ascending byte table at any stride 1-24, and
   the two `0x55`/`0xAA` windows turned out to be a RAM test and a UART path. The
-  dispatcher is likely a computed branch. **Opcode completeness therefore still
+  dispatcher is likely a computed branch. ~~**Opcode completeness therefore still
   rests on NuPhy's own enum (`opcodes.json`, module 40877 export S4), not on the
-  firmware.**
+  firmware.**~~ **CORRECTED (§76):** the dispatcher was found — a 208-entry jump
+  table at `0x42108` — and it adds three hidden opcodes (`0xD8`/`0xC4`/`0xF4`).
 - **No `caps`/`ctrl`/`swap`/`lock` string** anywhere — consistent with §58's swap
   not being a named feature.
 
 ### Custom-firmware implications
 
 Positive: unencrypted, standard toolchain (`riscv-none-elf-gcc` 12.2.0 + newlib
-4.2.0), documented MCU, and a clean `set_led` primitive. Unknown: whether the
+4.2.0), documented MCU, and a clean `set_led` primitive. ~~Unknown: whether the
 bootloader validates a signature. **Untested** — nothing has been rebuilt or
-flashed, and the Upgrader (PID `0x072D`) has not been contacted.
+flashed, and the Upgrader (PID `0x072D`) has not been contacted.~~ **CORRECTED
+(§67-§69, T1):** the Upgrader protocol is captured and reimplemented, and the
+bootloader does no validation — a modified image was flashed and booted.
 
 ## 66. `nuphykit` — total-coverage backup/restore
 
-`tools/nuphykit.py` reads and writes **all five** storage spaces in one shot,
+`tools/nuphykit.py` (now the `nuphykit` package — `python -m nuphykit`; the
+`tools/` script is the pre-§84 single-mode version) reads and writes **all five** storage spaces in one shot,
 which is the gap `restore.py` left: it only ever covered config memory, so any
 "backup" taken with it silently omitted mode settings, sleep, accessory type and
 lighting.
@@ -1962,11 +2007,13 @@ Verified end to end: full backup, deliberate perturbation of **two different
 spaces** (`func[1]` and a keymap byte), `verify` correctly reporting exactly 2
 differing bytes, then `restore` returning all five spaces to match.
 
-It honours the per-space write rules — whole-record for `sleep` and `light`,
-byte-granular for the rest.
+It honours the per-space write rules — whole-record for `sleep` ~~and `light`~~,
+byte-granular for the rest (`light` takes partial writes — §62), word-granular for
+`config` (§44); `func` and `light` are read and written per Mac/Win mode (§84).
 
 **Known gap, stated in the tool's own docstring:** the Ctrl<->Caps swap (§58) is
-persistent and is *not* captured, because the device exposes no way to read it.
+persistent and is *not* captured, because the device exposes no way to read it
+(located since: eeprom word `0x004`, §84). Nor are the radio link slots.
 
 ## 67. THE FLASH PROTOCOL — captured [T1/T2]
 
@@ -2059,9 +2106,10 @@ BLE library blob, which is a plausible size for both.
 ### What this means for custom firmware
 
 The mechanism for writing arbitrary content to the board's flash is now fully
-known and reimplementable. What is **not** known is whether the bootloader
+known and reimplementable. ~~What is **not** known is whether the bootloader
 validates the image (signature, CRC, magic). Nothing was written except NuPhy's
-own signed-or-not image, so that remains **untested**.
+own signed-or-not image, so that remains **untested**.~~ **RESOLVED (§69, T1):**
+it does not validate.
 
 
 ## 68. The flash protocol, reimplemented and verified [T2]
@@ -2089,7 +2137,8 @@ byte count; for `0x81`/`0x83` it is a fixed constant (`0x07` / `0x02`).
 
 **`flash()` itself is still gated behind an explicit confirm string and has never
 been executed.** Building the right bytes is proven; sending them is not, and it
-is not the same claim.
+is not the same claim. (Sending was proven in §69 — by `tools/flash.py`'s own loop
+over `build_frames()`, not by `flash()`.)
 
 ### A flash preserves settings — now confirmed twice
 
@@ -2103,7 +2152,7 @@ entropy 3.88 (structured pointer data), where an RSA/ECDSA blob would be near 8.
 That is evidence against cryptographic signing, **not proof**: a CRC check inside
 the bootloader remains possible, and **the bootloader is not part of this image**,
 so it cannot be inspected statically. Only NuPhy's own unmodified image has ever
-been sent.
+been sent. **RESOLVED (§69, T1):** a modified image was accepted — no validation.
 
 ## 69. CUSTOM FIRMWARE PROVEN — the bootloader does not validate [T1]
 
@@ -2157,13 +2206,15 @@ before.
 ### What it does NOT establish
 
 - Nothing has been *compiled*. Rebuilding from source needs the linker layout,
-  and the load-base question (§65 vs §67) is still unresolved.
+  and the load-base question (§65 vs §67) is still unresolved. (Since resolved:
+  base `0x13000`, §67, §74.)
 - Only **descriptor data** was altered. Modifying **code** has not been tried and
   carries real brick risk: an image that boots but breaks the `0xEF` handler
   would remove the software path back into the bootloader.
 - Whether a *physical* bootloader entry exists (key combo at plug-in, or the WCH
   factory ISP pin) is **unknown** — and that is the safety net that would make
-  code modification comfortable. **Find that before touching code.**
+  code modification comfortable. **Find that before touching code.** (Tested
+  since: no key-at-plug-in entry — §75; recovery architecture in §81.)
 
 ### Confirmed by the user
 
@@ -2171,9 +2222,11 @@ Kyle confirmed the keyboard **types normally** on the modified image, and chose
 to leave it installed. So the board now runs firmware built and flashed from this
 project — the strongest possible T1 on the whole write path.
 
-**Board state going forward:** the installed image is
+~~**Board state going forward:** the installed image is
 `firmware/Air100v3_MODIFIED_serial0721.bin`, identical to NuPhy 1.0.6.6 except
-one byte at `0x42650`. It reports serial `NuPhy Keybord 0721`. Stock can be
+one byte at `0x42650`. It reports serial `NuPhy Keybord 0721`.~~ **CORRECTED
+2026-09-29 [T2]:** the board is back on **stock** 1.0.6.6 (serial
+`NuPhy Keybord 0720`) — see BENCH-NOTES "Board state". Stock can be
 restored at any time by flashing `Air100v3_US_v1.0.6.6_20260723.bin`.
 
 ### Reproducing
@@ -2194,7 +2247,7 @@ it automatically — observed three times.
 Asked directly: is the blocker the tap/double-tap/hold feature set? **No.** VIA
 has supported tap dance for years. The blockers are structural.
 
-### The firmware is not QMK
+### The firmware is not stock QMK (but is QMK-derived — see correction below)
 
 Searched the whole image for the markers real QMK/VIA firmware always carries:
 
@@ -2205,8 +2258,12 @@ ChibiOS  chibios  tmk  keymap_config  eeconfig  raw_hid  QK_
 ```
 
 What it does carry: `riscv-none-elf-gcc-12.2.0`, `newlib-4.2.0`,
-`CH58x_BLE_LIB_V2.0`. This is **NuPhy's own firmware on WCH's CH58x SDK**. The
-QMK-looking keycode values are a borrowed numbering convention.
+`CH58x_BLE_LIB_V2.0`. This is **NuPhy's own firmware on WCH's CH58x SDK**. ~~The
+QMK-looking keycode values are a borrowed numbering convention.~~
+**CORRECTED 2026-09-29 [T2]:** the absence of marker *strings* undersold it —
+disassembly finds QMK core code linked in (eeconfig, `keymap_config`,
+`process_magic`, `sym_eager_pk`, `encoder_LUT`; §57, §73, §84). QMK-derived,
+stripped of names, with no VIA transport.
 
 ### The VIA transport does not exist on this device
 
@@ -2258,7 +2315,8 @@ ROM protocol — becomes the recovery tool.
 
 Establishing that is the gate on items 2 and 3, and it is a **zero-risk physical
 experiment**: hold a candidate key while plugging in, then check whether any
-`0x4348`/`0x1A86` device appears. Nothing is written either way. **[UNTESTED]**
+`0x4348`/`0x1A86` device appears. Nothing is written either way. ~~**[UNTESTED]**~~
+**Tested (§75, T1):** Esc at plug-in — negative; a key probably cannot reach ROM ISP.
 
 ## 71. Open firmware options for CH58x — CORRECTS §70
 
@@ -2299,17 +2357,19 @@ RAM:    sp = 0x20008000                                          -> 32 KB @ 0x20
 ### What is still missing to actually build one
 
 1. **Exact part number** — settle CH582 vs CH583 (weak evidence above).
-2. **Matrix wiring.** We know the *logical* matrix (18 columns, rows 0-5 plus a
-   synthetic row 6 for the knob) but **not which GPIOs** drive rows/columns.
-3. **LED hardware.** 119 LEDs confirmed, but not the driver type. The port
-   supports WS2812 and AW20216S; which one this board uses is unknown.
+2. ~~**Matrix wiring.** We know the *logical* matrix (18 columns, rows 0-5 plus a
+   synthetic row 6 for the knob) but **not which GPIOs** drive rows/columns.~~
+   **Done (§73)** — `matrix_pins.json`.
+3. ~~**LED hardware.** 119 LEDs confirmed, but not the driver type. The port
+   supports WS2812 and AW20216S; which one this board uses is unknown.~~
+   **Done (§74)** — 2x AW20216S-class over SPI, `led_map.json`.
 4. **Link address.** NuPhy's IAP bootloader occupies flash below `0x13000` and
    its protocol writes the app partition from offset 0. A QMK build would have to
    link to match, *or* be flashed whole via WCH's ROM ISP.
 5. **A physical recovery path** — still the gate (§70). Unchanged and unverified.
 
-Items 2 and 3 are the real work and cannot be answered from the firmware image
-alone; they need either a teardown, continuity probing, or disassembly of the
+Items 2 and 3 are the real work and ~~cannot be answered from the firmware image
+alone~~ (both were answered from the image — §72-§74); they need either a teardown, continuity probing, or disassembly of the
 matrix-scan and LED routines (`set_led` is already located: thunk `0x09AF8`, body `0x02D5C`, §65/§74).
 
 ## 72. Hardware facts recovered from the firmware (no teardown) [T2]
@@ -2603,7 +2663,7 @@ all 39 are accepted (`0xEE` via the pre-table path), though three are no-op acks
 | opcode | handler | family | what the code does |
 |--------|---------|--------|--------------------|
 | **`0xD8`** | `0x14824` | lighting | **SetKeyLightColor.** Loops over 4-byte payload records `(index, c, c, c)`, bound to 119, writing a 3-byte RGB entry per LED into the custom-colour table at `gp+0x350`. This is the per-key colour SET that §54 hypothesised did not exist. |
-| **`0xC4`** | `0x148EA` | macro | Calls a macro-storage routine over a 2 KB region (`0x062E4`). Sits with `0xC1`-`0xC3` (key upload / macro). Purpose not pinned beyond "macro-family write". |
+| **`0xC4`** | `0x148EA` | macro | Calls a macro-storage routine over a 2 KB region (`0x062E4`). Sits with `0xC1`-`0xC3` (key upload / macro). ~~Purpose not pinned beyond "macro-family write".~~ **Zero-fills both (Mac and Win) macro buffers in flash** (CORRECTED 2026-09-29 [T2], §84) — destructive. |
 | **`0xF4`** | `0x146DC` | sleep | **CORRECTED 2026-09-29 [T2]:** takes one payload byte and calls **`0x0F088`** (not `0x0F488`, as first read): `sb a0, 0x5EE(gp)` + set a dirty flag. That is the **auto-sleep on/off byte** — the same setter `0xF5` uses for byte 0, read back by `0xF3`. A **RAM-only** auto-sleep toggle (not persisted). It does not read PA5 (§73) or touch the rows. |
 
 ### Also learned from the table
@@ -2625,7 +2685,8 @@ hidden opcodes' *behaviour* is inferred from what their handlers do to memory,
 which is stronger than a readback but is not T1. `0xD8` in particular is a live,
 testable claim: send `0xD8 <len> ... <index,R,G,B>...` in a fixed-colour lighting
 mode and watch the key. Not done autonomously — it is a write via a hidden
-opcode, and confirming it needs eyes on the board.
+opcode, and confirming it needs eyes on the board. (Done since: §77-§78, T1 —
+it works under hidden effect >= 21.)
 
 ## 77. `0xD8` live test — CORRECTED: works fully under hidden effect >= 21 [T1]
 
@@ -2777,12 +2838,14 @@ and a timing field @6. ~~Clamped/capped at 100.~~ **CORRECTED 2026-09-29 [T2]:**
 (`0x06C80` is a keycode-range check, not a clamp). `more tap hold` (`0x06B1E`) is
 printed immediately before the hold path runs, not for an unexpected state.
 
-### `0xC4` (hidden) — macro-storage maintenance
+### `0xC4` (hidden) — ~~macro-storage maintenance~~ macro wipe (CORRECTED)
 
 Handler `0x148EA` -> `0x062E4`. Fetches a buffer via `0x38524`, then runs two
 block operations over **2 KB regions** (`0x800`). Sits with `0xC1 SetKeyUpload` /
-`0xC2 GetMacro` / `0xC3 SetMacro`. Consistent with a macro compact / save-to-flash
-op. **Family and shape are clear; the exact semantics are not pinned.**
+`0xC2 GetMacro` / `0xC3 SetMacro`. ~~Consistent with a macro compact / save-to-flash
+op. **Family and shape are clear; the exact semantics are not pinned.**~~
+**CORRECTED 2026-09-29 [T2]:** it **zero-fills both macro buffers** (Mac eeprom
+`0xB81`, Win `0x1381`) — a destructive wipe, not maintenance (§84).
 
 ### `0xF4` (hidden) — RAM-only auto-sleep toggle
 

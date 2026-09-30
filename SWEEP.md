@@ -45,19 +45,19 @@ Tick as each is mapped. Unknown storage is the interesting outcome.
 |---|--------|-------------|--------|---------------|------|
 | 1 | Auto Sleep | gear | 0/1 | **`0xF3`/`0xF5` index 0** | ☑ |
 | 2 | Level 1 / Level 2 Sleep | gear | minutes | **index 1 / index 2** (factory 6 / 24) | ☑ |
-| 2b | sleep index 3 | gear | — | present, factory `04`, **purpose unknown** | ☐ |
+| 2b | sleep index 3 | gear | — | present, factory `04`, ~~**purpose unknown**~~ early-sleep delay, seconds (PROTOCOL §79) | ☑ |
 | 3 | Accessory Switch | gear | Knob/Button | **AppDefine `0xFB`/`0xFC` offset `0xA8`** | ☑ |
 | 4 | Keyboard Layout | gear | 12 options | **app-only — sends NO device traffic** | ☑ |
 | 5 | Disable Win key | Mode Settings | 0/1 | **`0xE1`/`0xE2` index 1** | ☑ |
 | 6 | Alt+F4 | Mode Settings | 0/1 | **index 2** | ☑ |
 | 7 | Alt+Tab | Mode Settings | 0/1 | **index 3** | ☑ |
-| 8 | Anti-wobbliness | Mode Settings | 1=Low 2=Int 3=High | **index 0** | ☑ |
+| 8 | Anti-wobbliness | Mode Settings | 1=Low 2=Int 3=High | **index 0** = debounce lock x 10 ms, per Mac/Win mode (§84) | ☑ |
 | 9 | Light effect | Lighting | 20 effects | **`0xD5`/`0xD6` byte 0**, 1-based | ☑ |
 | 10 | Back light brightness | Lighting | 0-100 | **byte 1** (`00` = "off") | ☑ |
 | 10b | Side light brightness | Lighting | 0-60 | **byte 10** (`00` = "off") | ☑ |
 | 11 | Speed | Lighting | gears | **byte 2** (scale not pinned down) | ◐ |
 | 12 | Colour / Custom Color | Lighting | | not exercised | ☐ |
-| 13 | Per-key colour (does it exist?) | Lighting | | `0xD2` is read-only (§54) | ☐ |
+| 13 | Per-key colour (does it exist?) | Lighting | | `0xD2` is read-only (§54); **CORRECTED 2026-09-29 [T1]:** yes — hidden `0xD8` under effect >= 21, no UI (§76-§78) | ☑ |
 | 12b | Custom Color on/off + RGB | Lighting | | **byte 4** mode, **bytes 6-8** RGB (pre-scaled by brightness) | ☑ |
 | 14 | Knob action | Key Bindings | | matrix slots 108/109 + slot 13; app model agrees (§63) | ☑ |
 | 15 | Slider / TouchBar (`0xE6`) | — | — | **not on this model** — `especialKeys` is SquareKnob only | ☑ |
@@ -97,7 +97,9 @@ short list of things still unresolved.
 
 ## Priority target
 
-**The Ctrl/Caps swap (§58).** Not exposed by NuPhyIO as far as the bundle shows,
+~~**The Ctrl/Caps swap (§58).** Not exposed by NuPhyIO as far as the bundle shows,
 so it may not be reachable this way — but if any option here toggles it, this
 sweep finds it, and that is the one open item where the device disagrees with
-both its own storage and its own app.
+both its own storage and its own app.~~ **RESOLVED 2026-09-29 [T2]:** no UI
+option toggles it — the `0x7000` magic keycode does (`0x7001` clears), stored at
+eeprom word `0x004`, which no command reads (PROTOCOL §57, §84).

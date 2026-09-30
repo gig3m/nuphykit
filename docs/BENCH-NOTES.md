@@ -29,7 +29,7 @@ As of the **2026-09-29 re-verification** (Linux host, cable mode):
 Verify at any time:
 
 ```
-cd ~/projects/nuphy-re && uv run --with hidapi python -m nuphykit verify 20260929-mtcaps
+cd ~/Projects/nuphy-re && uv run --with hidapi python -m nuphykit verify 20260929-mtcaps
 ```
 
 The 2026-09-29 pass re-ran every read-only claim, reversible write tests on bank
@@ -39,7 +39,7 @@ host remapper). Corrections it forced are made in place and dated.
 ## Layout
 
 ```
-PROTOCOL.md              the spec, 1400+ lines, claims tagged by evidence tier
+PROTOCOL.md              the spec, 3200+ lines, claims tagged by evidence tier
 SWEEP.md                 UI option sweep procedure + checklist (Kyle's plan)
 AUDIT.md                 evidence rules + what is NOT proven  <- governs PROTOCOL.md
 docs/BENCH-NOTES.md      this file
@@ -49,10 +49,13 @@ enum_to_wire.json        app 24-bit enum -> 16-bit wire, + the 3 translation rul
 keypos_to_matrix.json    app keyPos -> matrix index
 keytest.html             keystroke capture page (see below)
 samples/                 MACRO-1-export.json — NuPhy's own macro interchange format
-snapshots/golden.bin     8 KB full device image, the restore reference
-snapshots/drive_main.js  the web app bundle (2.2 MB) for static analysis
+snapshots/golden.bin     8 KB config image — HISTORY now (see Board state);
+                         current full backups: snapshots/kit_20260929-*.json
+snapshots/drive_main.js  the web app bundle (2.2 MB) — NOT in the repo (NuPhy's
+                         code; gitignored); fetch your own from drive.nuphy.io
 tools/                   scan / restore / diff / probe scripts
-~/.local/bin/nuphy       the CLI
+~/.local/bin/nuphy       the OLD CLI — superseded by `nuphykit` (installed
+                         command, or `python -m nuphykit` from a checkout)
 ```
 
 Stale, kept only as history: `keypos.json`, `keymap_dump.json`, `keymap_bulk.bin`
@@ -100,8 +103,9 @@ whether the firmware *implements* a keycode needs T1.
 3. **Never hold a capture only in page memory.** The app reloads when the device
    re-enumerates; that lost a 20,092-frame firmware-flash capture. Persist
    incrementally (localStorage chunks or a local HTTP sink).
-4. **Bootloader is not exited by power cycling.** Only NuPhyIO's update flow
-   recovers it — which does work, fully, no physical intervention.
+4. **Bootloader is not exited by power cycling.** Only a reflash recovers it —
+   NuPhyIO's update flow (automatic, no physical intervention) or
+   `tools/flash.py` (used for §69; not yet rehearsed on Linux).
 5. **CORRECTED 2026-08-08:** "Quit NuPhyIO before using the CLI" was **wrong** —
    CLI reads work fine while the app is connected. The real hazard is the
    reverse: **every CLI command handshakes (`0xEE`), which mints a new session key
@@ -118,7 +122,8 @@ whether the firmware *implements* a keycode needs T1.
 8. **HOST-SIDE REMAPPERS CONTAMINATE EVERY T1 TEST.** Raycast's Hyper Key was
    enabled on `keyCode 57` (Caps Lock) and silently rewrote Caps Lock to Hyper at
    the OS level. That inverted a T1 result and cost four rounds on the Mac/Win
-   switch. **Run this before any keypress test:**
+   switch. **On macOS, run this before any keypress test** (on Linux, read
+   `/dev/hidraw*` instead — below):
 
    ```
    hidutil property --get "UserKeyMapping"          # expect (null)
@@ -157,14 +162,17 @@ whether the firmware *implements* a keycode needs T1.
 ## The protocol in one page
 
 **`opcodes.json` has all 39 commands with NuPhy's own names** — read it before
-sending anything. `0xEF SetIapMode` = bootloader entry (do not send).
+sending anything. `0xEF SetIapMode` = bootloader entry (do not send). The
+firmware also accepts hidden `0xD8`/`0xC4`/`0xF4`; `0xE3`/`0xE5`/`0xE6` are no-op
+acks, and `0xE4` types Enter (PROTOCOL §76, §84).
 
 ```
 transport   HID usage_page 0x01 / usage 0x00, 64-byte reports, report ID 0
 frame       [0]=0x55 cmd / 0xAA reply   [1]=opcode   [2]=0x00
             [3]=checksum = sum(bytes[4..63]) & 0xFF
             [4..]=payload, each byte XOR the session key
-payload     <length> <addr:16 LE> <pad 0x00> <data...>      (uniform!)
+payload     <length> <addr:16 LE> <pad> <data...>           (uniform!)
+            pad = 0x00, except 0xD5/D6/E1/E2: 0 = Mac, 1 = Win record (§84)
 session     0xEE handshake: bytes 4-7 zero, >=21 random bytes at 8+.
             Reply bytes 4-7 all equal the session key. NO init commands needed.
 addressing  addr16 = layer*0xDC + 2*(row*18 + col)
@@ -180,7 +188,9 @@ spaces      0xB2 is a GENERAL read over one flat config memory. The family Get*
               0x0740 macro event arena -> 0x16FF; append-only, currently 16B used
               0x174C SOCD (8B records)  0x1850 TapDance (8B)  0x1A58 TGL (2B)
             GetLightState/KeyboardFunc/SleepInfo/Base/FirmwareInfo are NOT in this
-            memory - volatile/computed state, read via their own commands.
+            window. CORRECTED 2026-09-29 [T2]: not "volatile" - light/func/sleep
+            are stored in QMK eeprom outside it (§84); Base and FirmwareInfo
+            are computed. Read via their own commands.
 notes       0xD2 GetKeyLightColor is a READ of live LED state (357B = 119x3);
             0xD8 is the hidden per-key-colour SET (PROTOCOL 76); 0xD2 is the read.
             Advanced-function slots: the table field is a BYTE OFFSET (slot*size),
@@ -193,7 +203,7 @@ notes       0xD2 GetKeyLightColor is a READ of live LED state (357B = 119x3);
 ```
 config memory 0x0000-0x1BFF  0xB2/0xB3   keymap, macros, SOCD/TapDance/TGL
 keyboard func 4 bytes x2     0xE1/0xE2   debounce x10ms, disable Win/AltF4/AltTab   [PER MODE]
-sleep cfg     4 bytes        0xF3/0xF5   auto-sleep, level-1/2 minutes   [whole record]
+sleep cfg     4 bytes        0xF3/0xF5   auto-sleep, L1/L2 min, early-sleep s  [whole record; 6 stored, §79]
 appdefine     0x03BA bytes   0xFB/0xFC   app scratch; 0xA8 = knob/button
 lighting      17 bytes x2    0xD5/0xD6   effect, brightness, speed, RGB   [PER MODE]
 ```
@@ -204,11 +214,13 @@ lighting      17 bytes x2    0xD5/0xD6   effect, brightness, speed, RGB   [PER M
 Old snapshots' bare `light`/`func` are Mac. Not reachable by any command: the
 Ctrl/Caps swap flag and the radio link slots (BLE bonds, 2.4G pairing).
 
-**`tools/nuphykit.py` covers all five at once** — `show` / `backup` / `verify` /
-`restore`. Use it, not `restore.py`, for anything calling itself a backup.
-`tools/cfg.py` reads/writes the small spaces; `tools/light.py` reads lighting.
-A factory reset clears **all** of them. The Ctrl/Caps swap (§58) is captured by
-**none** of them.
+**`nuphykit` covers all five at once** — `show` / `backup` / `verify` /
+`restore` (`python -m nuphykit ...`). Use it, not `restore.py`, for anything
+calling itself a backup. ~~`tools/nuphykit.py`, `tools/cfg.py`, `tools/light.py`~~
+are the pre-§84 single-mode versions (pad 0 = Mac only) — history; use
+`nuphykit cfg` / `nuphykit light`.
+A factory reset clears **all** of them (and the BLE bonds, but not the 2.4G
+pairing — §84). The Ctrl/Caps swap (§58) is captured by **none** of them.
 
 **Custom firmware recovery (PROTOCOL 81):** NuPhy's IAP bootloader uses a
 persistent DataFlash flag (0x55) and does NO image validation. So on-device
@@ -234,8 +246,8 @@ lighting and mode-settings commands are all in `PROTOCOL.md` §33–§46 and §6
 
 **Mac/Win switch (T1):** selects the base bank live — Mac→bank 0, Win→bank 4 — and
 writes nothing to config memory. So **every remap must be written to `layer` and
-`layer+4`** or it vanishes when the switch moves. Caps=Hyper currently exists only
-in bank 0.
+`layer+4`** or it vanishes when the switch moves. ~~Caps=Hyper currently exists only
+in bank 0.~~ (Caps is now `MT(HYPR, KC_ESC)` in banks 0 and 4 — see Board state.)
 
 **Knob (T1):** the top-right position is a swappable module — keycap (ships as
 Delete) or rotary knob, hot-swappable with a **0-byte** config diff. Rotate left =
@@ -288,14 +300,20 @@ Physical or judgement calls I cannot do alone:
 5. **Import Macros** — needs a file picker interaction.
 6. ~~Turn the knob~~ — **DONE, resolved T1 2026-08-08.** Rotation = matrix slots
    108/109; press = matrix slot 13. `0x06E0` is an alias window, `0x1700` is NOT
-   the knob and is now unexplained. See PROTOCOL §56.
-7. Per-key RGB: probably answered — `0xD2` is read-only with no Set counterpart.
-   Worth one confirmation that NuPhyIO cannot set a single key's colour.
+   the knob ~~and is now unexplained~~ — it is erased/unallocated (§59). See
+   PROTOCOL §56.
+7. ~~Per-key RGB: probably answered — `0xD2` is read-only with no Set counterpart.~~
+   **CORRECTED 2026-09-29 [T1]:** per-key RGB works via the hidden `0xD8` under
+   hidden effect >= 21 (`nuphykit keycolor`); NuPhyIO just never exposes it.
+   PROTOCOL §76-§78.
 
 ## Use the keystroke capture page for all T1 tests
 
+On Linux, prefer raw reports from `/dev/hidraw*` (HAZARD 8) — below every host
+remapper. The browser page is the macOS method:
+
 ```
-cd ~/projects/nuphy-re && python3 -m http.server 8777 --bind 127.0.0.1
+cd ~/Projects/nuphy-re && python3 -m http.server 8777 --bind 127.0.0.1
 # then http://127.0.0.1:8777/keytest.html
 ```
 
@@ -357,5 +375,5 @@ drops the connection, including mid-sentence. Widely reported publicly.
    reads `0xFFFF` after a factory reset. The vol codes were residue (§59).
 3. Characterise `0xFB`/`0xE1`/`0xF3`/`0xD5`/`0xC1`/`0xA0`/`0xFA` **individually
    and deliberately** — never by sweeping.
-4. Firmware binary acquisition (knocklist 4).
+4. ~~Firmware binary acquisition (knocklist 4).~~ — DONE (§64, §67-§69).
 5. Only then start the configurator.

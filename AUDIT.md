@@ -55,7 +55,7 @@ Rules this audit enforces:
 | 22 | modifier range `0x0100`–`0x1FFF` works | T1 | Ctrl+C on F14 | yes |
 | 22.1 | `TG(n)` locks a layer; `TT(n)` degrades to momentary | T1 | both tested on device | yes |
 | — | layer chaining 3 deep (L0→L2→L3) | T1 | distinct letters at each depth | yes |
-| 13 | Tap Dance long-press **fires discretely**, does not hold | T1 | HYPR→nothing, LCTL→no Ctrl, KC_B→visible `b` | yes — three probes, one positive |
+| 13 | Tap Dance long-press **fires discretely**, does not hold | T1 | HYPR→nothing, LCTL→no Ctrl, KC_B→visible `b` | yes — three probes, one positive. **CORRECTED 2026-09-29 [T2]:** the firmware *does* have a hold path (§79), so the cause of this observation is unlocated; not re-tested. QMK mod-tap works (§22) |
 | 26 | macro JSON ↔ wire encoding | T2 | byte-for-byte vs captured `0xC3` | yes |
 | 35 | macro offset table at `0x0700`, 32 entries | T2 | differential scan | yes |
 | 36 | TD/TGL/SOCD table bases and record sizes | T2 | differential, offsets 0/3/7/16/32 | yes — exposed the byte-offset bug |
@@ -118,11 +118,14 @@ correctly served bank 4, whose Caps holds the literal `0x0039` scancode — and
 **macOS turned that into Hyper before it reached the browser.** The bank model
 was right from the first test; the observation channel was lying.
 
-Distinguishing signature, visible in the capture the whole time: the keyboard's
+~~Distinguishing signature, visible in the capture the whole time: the keyboard's
 own `0x0F00` sets four modifier bits across successive HID reports, so keydowns
 arrive **staggered** (~5 ms apart, building `ctrl` → `ctrl+shift` → ...). Raycast
 injects all four in **one atomic event**. Kyle flagged that difference early and
-it was parked as noise; it was the entire answer.
+it was parked as noise; it was the entire answer.~~ **CORRECTED 2026-09-29 [T1]:**
+raw HID capture shows the keyboard sends `0x0F00` in **one** report; the stagger
+was the host splitting it. There is no timing tell — read reports below the OS
+(PROTOCOL §20, BENCH-NOTES HAZARD 8).
 
 ### B4. "There is no commit opcode" — was CONFIRMED, now **unfalsifiable as stated**
 What is established (T1) is that writes survive unplug/replug *without* a commit.
@@ -176,30 +179,40 @@ This is the list that matters — every past error came from here, not from B.
 
 1. ~~Anything above `0x2000`~~ — RESOLVED: device replies at every offset to
    0xFF00; data and writability end at 0x1BFF.
-2. **Config blobs at `0x0900`, `0x0E00`, `0x1100`, `0x1400`.** Structured data,
-   no correlation to any UI control attempted.
+2. ~~**Config blobs at `0x0900`, `0x0E00`, `0x1100`, `0x1400`.** Structured data,
+   no correlation to any UI control attempted.~~ — RESOLVED: stale flash in the
+   unallocated macro arena (PROTOCOL §55.1).
 3. ~~**`0x1700`–`0x174B`**~~ — **FULLY RESOLVED.** Knob claim falsified (T1, §56):
    letters planted there did nothing on rotation while matrix slots 108/109 typed.
    Then a factory reset left the whole region reading `0xFFFF` — **erased,
    unallocated**; the volume codes were residue, not structure (§59). Named from
    content in Part 5 and wrong for five sessions.
-4. **Per-key RGB persistence.** `0xD2` is a live stream; whether custom colours
-   are stored, and where, is untested.
+4. ~~**Per-key RGB persistence.** `0xD2` is a live stream; whether custom colours
+   are stored, and where, is untested.~~ — RESOLVED: `0xD2` is a read; per-key
+   colour is set by hidden `0xD8` under effect >= 21 and lives in RAM only
+   (T1, PROTOCOL §76-§78).
 5. **Import Macros.** Never exercised.
-6. **Firmware update path / Upgrader device (PID `0x072D`).** Never contacted.
+6. ~~**Firmware update path / Upgrader device (PID `0x072D`).** Never contacted.~~
+   — RESOLVED: protocol captured, reimplemented, and a modified image flashed
+   (PROTOCOL §67-§69).
 7. ~~**Quantum blocks `0x5600`, `0x7000`.**~~ **RESOLVED T1** — bound and pressed:
-   `0x5600`, `0x56F1` (swap-hands toggle) and `0x7000` all do **nothing**. Both
-   blocks are inert; a configurator must not offer them. Scope limit: `0x7000`
+   `0x5600`, `0x56F1` (swap-hands toggle) ~~and `0x7000`~~ all do **nothing**. ~~Both
+   blocks are inert;~~ a configurator must not offer them. Scope limit: `0x7000`
    was tested only for the control/caps-lock swap semantic. PROTOCOL §57.
+   **CORRECTED 2026-09-29 [T2]:** `0x7000` is NOT inert — it persistently sets
+   QMK's Ctrl<->Caps swap (eeprom word `0x004`); the effect only shows on the next
+   Ctrl/Caps press, and it almost certainly caused §58. `0x7001` clears it (§84).
 8. ~~Windows-mode banks 4-7 writable~~ — RESOLVED: 0x0372 write/readback/restore
    verified. **T2**
 9. **Opcodes not characterised:** `0xFB` sub-`0x01`, `0xE1`, `0xF3`, `0xD5`,
    `0xC1`, `0xA0`, `0xFA`, `0xB4`. **DO NOT SWEEP** — one opcode in 0x40-0xFF
    enters the bootloader (PROTOCOL sec 47).
 10. ~~The `02` prefix~~ — RESOLVED: it is a LENGTH field (PROTOCOL sec 42).
-11. **Knob/slider configuration UI** — the model defines `SquareKnob` and
-    `LeftRightSlider`; neither was opened.
-12. **The app's gear/settings menu, keyboard icon, chat icon.** Never opened.
+11. ~~**Knob/slider configuration UI** — the model defines `SquareKnob` and
+    `LeftRightSlider`; neither was opened.~~ — RESOLVED: knob = matrix slots
+    108/109 + 13 (T1, PROTOCOL §56); no slider on this model (§63).
+12. ~~**The app's gear/settings menu, keyboard icon, chat icon.** Never opened.~~
+    — gear menu mapped (PROTOCOL §61).
 
 ---
 
@@ -221,9 +234,9 @@ truer section is not enough — the stale one has to be neutralised at its sourc
 |---------|---------|
 | 1. above `0x2000` | RESOLVED — replies to 0xFF00, data/writability end at 0x1BFF |
 | 2. config blobs `0x0900`/`0x0E00`/`0x1100`/`0x1400` | **RESOLVED** — unallocated macro arena holding stale flash (PROTOCOL §55.1). Four competing hypotheses falsified first. |
-| 3. `0x1700` = knob | **RESOLVED — falsified.** Knob = matrix slots 108/109 (T1, §56). `0x06E0` turned out to be an *alias window* onto those same slots, not a table. `0x1700` itself is unexplained. |
-| 4. per-key RGB persistence | RESOLVED direction — `0xD2` is `GetKeyLightColor`, a **read**, with no Set counterpart; the app polls it to animate its preview |
-| 7. quantum blocks `0x5600`/`0x7000` | store but unverified — needs T1 |
+| 3. `0x1700` = knob | **RESOLVED — falsified.** Knob = matrix slots 108/109 (T1, §56). `0x06E0` turned out to be an *alias window* onto those same slots, not a table. `0x1700` itself is ~~unexplained~~ erased/unallocated (§59). |
+| 4. per-key RGB persistence | RESOLVED direction — `0xD2` is `GetKeyLightColor`, a **read**, ~~with no Set counterpart~~; the app polls it to animate its preview. **CORRECTED:** the Set is hidden `0xD8` (§76-§78) |
+| 7. quantum blocks `0x5600`/`0x7000` | store but unverified — needs T1. (Since: swap-hands inert T1; `0x7000` = live Ctrl<->Caps magic, T2 — see C7) |
 | 8. Windows banks writable | RESOLVED — verified |
 | 9. uncharacterised opcodes | **RESOLVED** — full named enum recovered (`opcodes.json`, 39 commands) |
 | 10. the `02` prefix | RESOLVED — a length field |

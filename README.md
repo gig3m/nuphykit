@@ -1,7 +1,9 @@
 # nuphykit — open-source tooling for the NuPhy Air100 V3
 
-NuPhy's Air100 V3 borrows QMK's *keycode numbering* but is **not QMK** — it's
-custom firmware on a WCH CH58x, with the VIA endpoint absent. So no VIA JSON will
+NuPhy's Air100 V3 runs NuPhy's own firmware on a WCH CH58x. Its core is
+QMK-derived (keycode numbering, eeconfig, magic keycodes, debounce, encoder
+code are all recognisably QMK), but it is not stock QMK and the VIA endpoint is
+absent. So no VIA JSON will
 ever make `usevia.app` talk to it. NuPhy shipped a proprietary raw-HID protocol
 and a so-so configurator instead.
 
@@ -99,7 +101,7 @@ All from static analysis of the (freely downloadable) firmware image — no
 teardown:
 
 - **Command dispatch table** — 42 commands, incl. 3 the app never sends
-  (`0xD8` per-key RGB, `0xC4` macro-maintenance, `0xF4` RAM-only auto-sleep toggle).
+  (`0xD8` per-key RGB, `0xC4` zero-fills both macro buffers, `0xF4` RAM-only auto-sleep toggle).
 - **Matrix pin map** — `matrix_pins.json` (rows `PB16/17/18/20/21/22`, 18 cols).
 - **LED driver** — 2× AW20216S-class over SPI; per-LED channel map in
   `led_map.json`.
@@ -108,8 +110,9 @@ teardown:
 - **CORRECTED 2026-09-29 [T2]:** `PA5`/`PA6` are the knob's rotary-encoder
   lines (QMK encoder table at `0x3FC84`), not the Mac/Win switch. The Mac/Win
   switch is **`PB9`** and the cable/wireless switch **`PB8`** (PROTOCOL §84). The tap-dance code *does* have a hold path (register on timeout,
-  unregister on key-up; 100 ms floor on the timing field), so the tap-hold
-  limitation is not explained by the firmware code (PROTOCOL §73, §79).
+  unregister on key-up; 100 ms floor on the timing field), so the one observed
+  Tap Dance long-press that did not hold is not explained by the firmware code —
+  cause unlocated (PROTOCOL §73, §79). QMK mod-tap works, tap and hold (§22).
 - `0xE3`/`0xE5`/`0xE6` (debounce, touch-bar) are no-op acks in 1.0.6.6 — 38
   functional handlers plus the `0xEE` handshake (§76).
 

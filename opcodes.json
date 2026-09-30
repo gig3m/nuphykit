@@ -22,15 +22,15 @@
     "0xC2": "GetMacro",
     "0xC3": "SetMacro              [verified: macro block upload]",
     "0xD1": "GetLightCount",
-    "0xD2": "GetKeyLightColor      [NOTE: I had called this a live LED frame stream]",
+    "0xD2": "GetKeyLightColor      [verified: polled read of rendered LED state, 357 bytes - PROTOCOL 54]",
     "0xD5": "GetLightState",
     "0xD6": "SetLightState         [verified: effect/brightness/speed/colour]",
     "0xE1": "GetKeyboardFunc",
-    "0xE2": "SetKeyboardFunc       [verified: mode settings]",
-    "0xE3": "SetDebounceTime       [the anti-wobbliness control]",
-    "0xE4": "TestDelayTime",
-    "0xE5": "SetTouchBarConfig     [the LeftRightSlider]",
-    "0xE6": "GetTouchBarConfig",
+    "0xE2": "SetKeyboardFunc       [verified: mode settings; per Mac/Win via pad byte; UNBOUNDED past byte 3 - PROTOCOL 84]",
+    "0xE3": "SetDebounceTime       [NO-OP ack in fw 1.0.6.6; real debounce is func[0] x10 ms via 0xE2 - PROTOCOL 84]",
+    "0xE4": "TestDelayTime         [HAZARD: payload byte1!=0 TYPES an Enter key; measures nothing - PROTOCOL 84]",
+    "0xE5": "SetTouchBarConfig     [NO-OP ack; this model has no touch bar/slider - PROTOCOL 76]",
+    "0xE6": "GetTouchBarConfig     [NO-OP ack - PROTOCOL 76]",
     "0xEE": "SetSecretKey          [verified: THE HANDSHAKE - confirms session-key model]",
     "0xEF": "SetIapMode            [*** BOOTLOADER ENTRY - this is what my opcode sweep hit ***]",
     "0xF1": "RestoreFactory",
@@ -54,5 +54,13 @@
     "0x77": "Macro",
     "0x7F": "ADVANCED"
   },
-  "constants_module40877_Hc": { "PACKET_SIZE": "0x40", "DATA_INDEX": "0x08" }
+  "constants_module40877_Hc": {
+    "PACKET_SIZE": "0x40",
+    "DATA_INDEX": "0x08"
+  },
+  "hidden_in_firmware_not_in_app_enum": {
+    "0xC4": "zero-fills BOTH macro buffers in flash (destructive) - PROTOCOL 76/84",
+    "0xD8": "SetKeyLightColor: per-key RGB, renders under effect >= 21 - PROTOCOL 76-78",
+    "0xF4": "RAM-only auto-sleep toggle - PROTOCOL 79"
+  }
 }

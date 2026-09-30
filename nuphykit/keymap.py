@@ -46,13 +46,17 @@ KC_TOGGLE_BASE = 0x7F80
 DANGEROUS = {
     0x7E00: "BOOT - reboots into the bootloader when pressed",
     0x7E13: "RESET - resets the keyboard when pressed",
+    # CORRECTED 2026-09-29 [T2]: 0x7000 was listed as inert. It is live QMK magic -
+    # pressing it persistently swaps Ctrl<->Caps (eeprom word 0x004), invisible to
+    # the keymap and to every backup; 0x7001 clears it (§57/§84).
+    0x7000: "MAGIC swap Ctrl<->Caps - persists when pressed, no command reads it; "
+            "0x7001 clears it",
 }
 
 # Verified inert on this firmware - they store but do nothing (§57, T1).
 INERT = {
     0x5600: "swap-hands (not compiled in)",
     0x56F1: "swap-hands toggle (not compiled in)",
-    0x7000: "QMK magic / control-capslock swap (not implemented)",
 }
 
 

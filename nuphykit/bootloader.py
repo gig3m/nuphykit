@@ -96,13 +96,14 @@ def build_frames(image: bytes) -> list[bytes]:
 def flash(image: bytes, confirm: str = "") -> None:
     """Write a firmware image. **UNTESTED - THIS CAN BRICK THE BOARD.**
 
-    The frame layout below is reconstructed from a captured NuPhyIO flash and is
-    believed correct, but this code path has never been executed. It is also
-    unknown whether the bootloader validates the image at all (signature, CRC,
-    magic) - only NuPhy's own image has ever been sent.
+    The frames come from build_frames(), verified byte-for-byte against a
+    captured NuPhyIO flash (§68), but THIS sender has never been executed - the
+    §69 flash used tools/flash.py's own loop over build_frames().
 
-    If a bad image is accepted, NuPhyIO's recovery flow may or may not be able to
-    put things right. Requires confirm="I understand this may brick the board".
+    The bootloader does NO image validation (§69, T1): it accepted a modified
+    image and boots whatever is written. So a bad image is not rejected; if it
+    still enumerates and handles 0xEF it can be reflashed (§81), otherwise only
+    WCH ROM ISP recovers it. Requires confirm="I understand this may brick the board".
     """
     if confirm != "I understand this may brick the board":
         raise NuPhyError(
