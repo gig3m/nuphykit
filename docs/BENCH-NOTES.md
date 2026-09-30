@@ -346,22 +346,24 @@ drops the connection, including mid-sentence. Widely reported publicly.
   **No incident has been captured yet.**
 
 **Live hypotheses, none confirmed** (PROTOCOL §83-§84):
-1. **USB bandwidth contention at the dongle** — owner's field experience: moving
-   the dongle off shared buses fixes it. The dongle polls 6 interrupt endpoints at
-   1 ms (big periodic reservation behind a hub's TT); when IN sends fail it
-   retries then **flushes its queue, key-ups included** (`equal > max` /
-   `over send remove`). **Most likely; cheapest to test.**
+1. ~~USB bandwidth contention at the dongle~~ — **explains a different symptom
+   (owner, 2026-09-30):** on a shared bus the dongle *flatly doesn't work or stops
+   working* — not intermittent. Consistent with its 6 interrupt endpoints at 1 ms
+   (a large periodic reservation behind a hub's TT) being refused or starved, and
+   its queue flushing. Fix: dongle on its own root port. **Not the cause of the
+   intermittent mid-sentence repeats.** (A dongle patch to a longer `bInterval`
+   could make it tolerate shared buses — optional.)
 2. Radio fade → keyboard drops a key-up after 50 retries (`loss a key`), never
    re-sent; keep-alives hold the stuck key until the next keypress. (~40 %, T2 only)
 3. Full RF disconnect/reconnect (`rf has disconnect`), keys typed meanwhile lost.
 4. Switch chatter (29 ms re-press seen once; debounce is `func[0]` x 10 ms = 20 ms).
 
 **Next steps, in order:**
-1. **Reproduce #1 on demand:** put the dongle in the bus-5 12M hub next to the
-   USB audio device, play audio, cable in for the keyboard log, type with
-   `python -m nuphykit diag --out ~/nuphy-diag.txt`. Dongle `RADIO` flush lines +
-   `LATE-UP` = confirmed. If confirmed: advise root-port placement; consider a
-   dongle patch that lengthens `bInterval` (descriptor at dongle `0x292E0`+).
+1. **Radio stress test (provokes #2/#3 on demand):** dongle on its root port,
+   cable in for the keyboard log, `python -m nuphykit diag --out ~/nuphy-diag.txt`,
+   then degrade the link while typing — hand over the dongle, loose foil, or
+   distance. `RADIO … loss a key` + a key stuck until the next press confirms #2;
+   `rf has disconnect` points at #3.
 2. Otherwise run `diag` wherever it fails in daily use and read the `RADIO` lines.
 3. Only after an incident names the cause: firmware patch work — rehearse a stock
    reflash on Linux first (`nuphykit/bootloader.py`), then patch. Candidates:
