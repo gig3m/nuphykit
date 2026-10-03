@@ -345,7 +345,15 @@ drops the connection, including mid-sentence. Widely reported publicly.
 - Two clean `diag` baselines (1,500 presses): no faults, -59..-65 dBm, low retry %.
   **No incident has been captured yet.**
 
-**Live hypotheses, none confirmed** (PROTOCOL §83-§84):
+**First live capture (2026-10-03, T1 for the log):** during a fade (RSSI -70 →
+-78 dBm, retry rate 45 %) the keyboard logged `rend index 7821, channel 36 type 0
+over 50 times` + `loss a key 10, 0` — **a key report dropped after 50 retries** —
+then hopped 36 → 26 (the dongle followed). No stuck key that time, so it was not
+a key-up. Signal was weaker than on 09-29 (-70..-78 vs -60); two hops in 30 min.
+`diag` now runs as a user service: `systemctl --user status nuphy-diag`, log in
+`~/nuphy-diag.txt` with wall-clock times.
+
+**Live hypotheses** (PROTOCOL §83-§84):
 1. ~~USB bandwidth contention at the dongle~~ — **explains a different symptom
    (owner, 2026-09-30):** on a shared bus the dongle *flatly doesn't work or stops
    working* — not intermittent. Consistent with its 6 interrupt endpoints at 1 ms

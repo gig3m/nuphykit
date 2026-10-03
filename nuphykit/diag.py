@@ -94,7 +94,8 @@ class Diag:
     # -- output ----------------------------------------------------------
     def emit(self, kind: str, msg: str, t: float | None = None):
         t = time.time() if t is None else t
-        line = f"{t - self.t0:9.3f}  {kind:7} {msg}"
+        clock = time.strftime("%H:%M:%S", time.localtime(t))
+        line = f"{clock} {t - self.t0:9.3f}  {kind:7} {msg}"
         print(line, flush=True)
         if self.out:
             self.out.write(line + "\n")
