@@ -1,0 +1,93 @@
+# diag excerpt - 2026-10-03 08:05:18 incident (keys hidden; timing + radio only)
+# owner typed 'Judaism', screen showed ' Judaaaaaaism..' (5 extra 'a')
+08:03:26  1672.576  fw      ====chan 34, rate 0, rssi -74, ack 1 ===
+08:03:29  1675.583  fw      err rate samples: 5 0 0 0 0
+08:03:29  1675.583  fw      ====chan 34, rate 0, rssi -73, ack 1 ===
+08:03:34  1679.787  fw      err rate samples: 0 0 0 0 0
+08:03:34  1679.788  fw      ====chan 34, rate 0, rssi -73, ack 1 ===
+08:03:38  1684.598  fw      err rate samples: 0 0 0 0 0
+08:03:38  1684.598  fw      ====chan 34, rate 0, rssi -72, ack 1 ===
+08:03:47  1693.614  fw      err rate samples: 0 0 16 0 10
+08:03:47  1693.614  fw      ====chan 34, rate 0, rssi -74, ack 1 ===
+08:03:50  1696.416  LONG    2.4g key held 268 ms (> 250 ms: host would autorepeat)
+08:03:52  1697.798  fw      err rate samples: 0 0 0 0 7
+08:03:52  1697.798  fw      ====chan 34, rate 0, rssi -75, ack 1 ===
+08:03:55  1700.830  fw      err rate samples: 0 5 0 0 6
+08:03:55  1700.830  fw      ====chan 34, rate 0, rssi -74, ack 1 ===
+08:03:59  1705.032  fw      err rate samples: 0 0 0 0 66
+08:03:59  1705.032  fw      ====chan 34, rate 20, rssi -85, ack 1 ===
+08:04:04  1709.696  LONG    2.4g key held 321 ms (> 250 ms: host would autorepeat)
+08:04:05  1711.015  fw      err rate samples: 0 0 50 0 37
+08:04:05  1711.015  fw      ====chan 34, rate 40, rssi -82, ack 1 ===
+08:04:08  1714.021  fw      err rate samples: 0 0 30 23 8
+08:04:08  1714.021  fw      ====chan 34, rate 0, rssi -81, ack 1 ===
+08:04:13  1719.426  fw      err rate samples: 8 8 20 42 42
+08:04:13  1719.426  fw      ====chan 34, rate 40, rssi -84, ack 1 ===
+08:04:20  1725.772  RADIO   [fw] =====prepare hop to channel 22, addr 1493674067 queue size 2, index 16974===
+08:04:20  1725.841  fw      =====receive hop ack success, change channel 22 after 1 second
+08:04:21  1726.846  RADIO   [fw] ====do hop channel 34 -> 22
+08:04:21  1726.846  dongle  rf channel 34, remot pair channel 22
+08:04:21  1726.846  RADIO   [dongle] =====jump to channel 22===
+08:04:21  1726.846  dongle  ====hop success, save channel 22====
+08:04:26  1731.679  fw      err rate samples: 25 0 16 0 0
+08:04:26  1731.679  fw      ====chan 22, rate 0, rssi -74, ack 1 ===
+08:04:31  1737.050  fw      err rate samples: 0 0 0 16 0
+08:04:31  1737.050  fw      ====chan 22, rate 0, rssi -75, ack 1 ===
+08:04:34  1740.052  fw      err rate samples: 0 0 0 0 0
+08:04:34  1740.052  fw      ====chan 22, rate 0, rssi -76, ack 1 ===
+08:04:40  1746.461  LONG    2.4g key held 1677 ms (> 250 ms: host would autorepeat)
+08:04:41  1747.656  LONG    2.4g key held 260 ms (> 250 ms: host would autorepeat)
+08:04:43  1749.058  fw      err rate samples: 0 0 8 0 0
+08:04:43  1749.058  fw      ====chan 22, rate 0, rssi -73, ack 1 ===
+08:04:47  1753.067  LONG    2.4g key held 1792 ms (> 250 ms: host would autorepeat)
+08:04:49  1755.056  fw      err rate samples: 0 0 0 0 0
+08:04:49  1755.084  fw      ====chan 22, rate 0, rssi -78, ack 1 ===
+08:04:52  1758.098  fw      err rate samples: 0 0 0 0 0
+08:04:52  1758.098  fw      ====chan 22, rate 0, rssi -75, ack 1 ===
+08:04:57  1762.867  fw      err rate samples: 0 0 0 0 0
+08:04:57  1762.867  fw      ====chan 22, rate 0, rssi -74, ack 1 ===
+08:04:59  1765.480  LONG    2.4g key held 793 ms (> 250 ms: host would autorepeat)
+08:05:01  1767.097  fw      err rate samples: 0 0 0 0 0
+08:05:01  1767.097  fw      ====chan 22, rate 0, rssi -74, ack 1 ===
+08:05:04  1770.118  fw      err rate samples: 11 0 0 0 0
+08:05:04  1770.118  fw      ====chan 22, rate 0, rssi -74, ack 1 ===
+08:05:07  1773.120  fw      err rate samples: 0 0 0 0 12
+08:05:07  1773.120  fw      ====chan 22, rate 0, rssi -84, ack 1 ===
+08:05:11  1777.284  fw      err rate samples: 0 0 0 0 0
+08:05:11  1777.284  fw      ====chan 22, rate 0, rssi -76, ack 1 ===
+08:05:12  1777.697  RADIO   [fw] =====prepare hop to channel 39, addr 1493674067 queue size 2, index 17533===
+08:05:12  1777.741  fw      =====receive hop ack success, change channel 39 after 1 second
+08:05:13  1778.742  RADIO   [fw] ====do hop channel 22 -> 39
+08:05:13  1778.742  dongle  rf channel 22, remot pair channel 39
+08:05:13  1778.742  RADIO   [dongle] =====jump to channel 39===
+08:05:13  1778.785  dongle  ====hop success, save channel 39====
+08:05:16  1781.763  fw      err rate samples: 36 11 16 18 8
+08:05:16  1781.763  fw      ====chan 39, rate 20, rssi -78, ack 1 ===
+08:05:18  1784.365  RADIO   [fw] =====prepare hop to channel 16, addr 1493674067 queue size 2, index 17628===
+08:05:18  1784.550  RADIO   [fw] ====rend index 17626, channel 39 type 0 over 50 times, err rate 0
+08:05:18  1784.550  RADIO   [fw] loss a key 0, 0
+08:05:18  1784.589  LONG    2.4g key held 450 ms (> 250 ms: host would autorepeat)
+08:05:18  1784.616  LATE-UP 2.4g key still down 351 ms when the next key was pressed (repeat delay 250 ms)
+08:05:18  1784.616  fw      =====receive hop ack success, change channel 16 after 1 second
+08:05:18  1784.625  LONG    2.4g key held 361 ms (> 250 ms: host would autorepeat)
+08:05:19  1785.637  RADIO   [fw] ====do hop channel 39 -> 16
+08:05:19  1785.637  dongle  rf channel 39, remot pair channel 16
+08:05:19  1785.637  RADIO   [dongle] =====jump to channel 16===
+08:05:19  1785.637  dongle  ====hop success, save channel 16====
+08:05:24  1790.459  fw      err rate samples: 50 87 33 42 45
+08:05:24  1790.459  fw      ====chan 16, rate 100, rssi -63, ack 1 ===
+08:05:24  1790.459  fw      =====channel 16 is too bad, should jump
+08:05:35  1801.269  fw      err rate samples: 16 15 0 16 0
+08:05:35  1801.269  fw      ====chan 16, rate 0, rssi -68, ack 1 ===
+08:05:48  1813.878  fw      err rate samples: 16 0 42 33 0
+08:05:48  1813.878  fw      ====chan 16, rate 40, rssi -75, ack 1 ===
+08:06:02  1827.664  fw      err rate samples: 66 25 16 33 0
+08:06:02  1827.664  fw      ====chan 16, rate 40, rssi -68, ack 1 ===
+08:06:20  1845.712  fw      err rate samples: 0 0 0 0 14
+08:06:20  1845.712  fw      ====chan 16, rate 0, rssi -68, ack 1 ===
+08:06:35  1860.802  RADIO   [fw] =====prepare hop to channel 30, addr 1493674067 queue size 1, index 17817===
+08:06:35  1860.802  fw      =====receive hop ack success, change channel 30 after 1 second
+08:06:36  1861.805  RADIO   [fw] ====do hop channel 16 -> 30
+08:06:36  1861.805  dongle  rf channel 16, remot pair channel 30
+08:06:36  1861.805  RADIO   [dongle] =====jump to channel 30===
+08:06:36  1861.805  dongle  ====hop success, save channel 30====

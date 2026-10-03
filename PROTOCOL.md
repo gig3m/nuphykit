@@ -3272,7 +3272,11 @@ on this host it is off (`power/control=on`, never suspended).
 1. **Key-up dropped after 50 retries during a short fade** while still
    "connected": `loss a key` / `over 50 times ... type 0`, high `err rate
    samples`; in `diag`, the release arrives with the *next* key. Fits repeats
-   mid-sentence.
+   mid-sentence. **CONFIRMED [T1] 2026-10-03 08:05:18:** "Judaism" typed as
+   "Judaaaaaaism" — a type-0 report dropped after 50 retries mid-hop
+   (`loss a key 0, 0`), `a` held ~360 ms until the next key, 5 repeats at
+   250 ms / 40 Hz. Log: `docs/incidents/2026-10-03-0805-dropped-keyup.log`;
+   write-up in `docs/BENCH-NOTES.md`.
 2. **Full disconnect/reconnect**: `rf has disconnect` ... `rf has connected`;
    the release comes ~1 s after the last report (dongle timer); keys typed
    during the reconnect are missing.

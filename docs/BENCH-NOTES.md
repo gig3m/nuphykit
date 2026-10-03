@@ -353,7 +353,32 @@ a key-up. Signal was weaker than on 09-29 (-70..-78 vs -60); two hops in 30 min.
 `diag` now runs as a user service: `systemctl --user status nuphy-diag`, log in
 `~/nuphy-diag.txt` with wall-clock times.
 
-**Live hypotheses** (PROTOCOL §83-§84):
+**INCIDENT CAPTURED — 2026-10-03 08:05:18 — cause #2 below CONFIRMED [T1].**
+Owner typed "Judaism"; the screen showed ` Judaaaaaaism..` (5 extra `a`).
+Log: `docs/incidents/2026-10-03-0805-dropped-keyup.log`. Sequence:
+
+```
+08:05:13  do hop channel 22 -> 39              (dongle: jump to channel 39)
+08:05:16  err rate samples: 36 11 16 18 8  rate 20  rssi -78   (39 is bad too)
+08:05:18  prepare hop to channel 16
+08:05:18  rend index 17626, channel 39 type 0 over 50 times / loss a key 0, 0
+08:05:18  LONG 450 ms + 361 ms; LATE-UP: key still down 351 ms at the next press
+08:05:24  channel 16: err rate 50 87 33 42 45, rate 100 - "is too bad, should jump"
+```
+
+A key report (first bytes `0, 0`: no modifiers — consistent with the release)
+was dropped after 50 retries mid-hop; nothing re-sends key state, so the host
+saw `a` held ~360 ms until the next keypress repaired it. At Hyprland's 250 ms
+delay / 40 Hz that is (360-250)/25 ≈ 4-5 repeats — **matches the 5 extra `a`**.
+
+Environment: the 2.4 GHz band here is congested — **7 channel hops in 30 min**,
+per-channel retry rates up to 87 %, RSSI swinging -63..-84 dBm.
+
+Fixes, cheapest first: move 2.4 GHz Wi-Fi off the band / dongle in line of sight
+on an extension; `repeat_delay` ~500 ms masks stalls of this size; a keyboard
+firmware patch that re-sends full key state after a dropped type-0 report.
+
+**Hypotheses** (PROTOCOL §83-§84):
 1. ~~USB bandwidth contention at the dongle~~ — **explains a different symptom
    (owner, 2026-09-30):** on a shared bus the dongle *flatly doesn't work or stops
    working* — not intermittent. Consistent with its 6 interrupt endpoints at 1 ms
@@ -366,7 +391,8 @@ a key-up. Signal was weaker than on 09-29 (-70..-78 vs -60); two hops in 30 min.
    intermittent mid-sentence repeats.** (A dongle patch to a longer `bInterval`
    could make it tolerate shared buses — optional.)
 2. Radio fade → keyboard drops a key-up after 50 retries (`loss a key`), never
-   re-sent; keep-alives hold the stuck key until the next keypress. (~40 %, T2 only)
+   re-sent; the key stays stuck until the next keypress. **CONFIRMED T1
+   2026-10-03** (incident above).
 3. Full RF disconnect/reconnect (`rf has disconnect`), keys typed meanwhile lost.
 4. Switch chatter (29 ms re-press seen once; debounce is `func[0]` x 10 ms = 20 ms).
 
